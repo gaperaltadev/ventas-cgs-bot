@@ -4,7 +4,7 @@ import { promises as fs } from 'fs';
 import { handleCommand } from './commands.js';
 import { supabase } from './lib/supabase.js';
 import { sessions, isAllowed } from './lib/session.js';
-import { startAuthServer, updateAuthState } from './lib/auth-server.js';
+import { startAuthServer, updateAuthState, recordAuthError } from './lib/auth-server.js';
 
 // ─── Validación de variables de entorno al arranque ──────────────────────────
 // Falla rápido con mensaje claro antes de que cualquier librería tire un stack trace.
@@ -277,6 +277,7 @@ async function connect() {
       });
     } catch (e) {
       console.error(`[pairing] Error en intento ${pairingAttempt}:`, e.message);
+      recordAuthError(`Error al generar pairing code: ${e.message}`);
     }
   }
 
