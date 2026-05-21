@@ -40,6 +40,15 @@ CREATE INDEX IF NOT EXISTS idx_vehicle_search_trgm
 CREATE INDEX IF NOT EXISTS idx_vehicle_brand_model
   ON vehicle_guide (brand, model);
 
+-- RLS: solo el service_role del bot puede leer/escribir.
+-- (El bot usa SUPABASE_SERVICE_KEY, que bypasea RLS por diseño.
+--  Esta política bloquea explícitamente las keys anon/authenticated.)
+ALTER TABLE vehicle_guide ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "vehicle_guide_service_role_only" ON vehicle_guide;
+CREATE POLICY "vehicle_guide_service_role_only" ON vehicle_guide
+  FOR ALL TO authenticated, anon USING (false) WITH CHECK (false);
+
 -- RPC: búsqueda fuzzy por marca/modelo/año
 CREATE OR REPLACE FUNCTION search_vehicle_guide(
   q TEXT,
