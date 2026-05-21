@@ -1,7 +1,8 @@
 import makeWASocket, { DisconnectReason, useMultiFileAuthState } from '@whiskeysockets/baileys';
-import { createClient } from '@supabase/supabase-js';
 import qrcode from 'qrcode-terminal';
 import { handleCommand } from './commands.js';
+import { supabase } from './lib/supabase.js';
+import { sessions, isAllowed } from './lib/session.js';
 
 // ─── Validación de variables de entorno al arranque ──────────────────────────
 // Falla rápido con mensaje claro antes de que cualquier librería tire un stack trace.
@@ -24,38 +25,12 @@ if (warnings.length) {
   console.warn('   El bot va a arrancar igual pero con valores por defecto.\n');
 }
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY
-);
-
-export const sessions = new Map();
-
-// Números autorizados (vacío = todos, solo para desarrollo)
-const ALLOWED = process.env.ALLOWED_NUMBERS
-  ? new Set(process.env.ALLOWED_NUMBERS.split(',').map(n => n.trim()).filter(Boolean))
-  : null;
-
-function isAllowed(jid) {
-  if (!ALLOWED || ALLOWED.size === 0) return true;
-  const number = jid.split('@')[0];
-  return ALLOWED.has(number);
-}
-
 // Prefijo que activa el bot
-const PREFIX = process.env.BOT_PREFIX || '.';
-
-// TTL: limpiar sesiones inactivas por más de 15 minutos
-setInterval(() => {
-  const cutoff = Date.now() - 15 * 60 * 1000;
-  for (const [jid, session] of sessions) {
-    if (session.updatedAt < cutoff) sessions.delete(jid);
-  }
-}, 5 * 60 * 1000);
+const PREFIX = process.env.BOT_PREFIX || '/';
 
 // ─── Comandos reconocidos para escape de flujo guiado ────────────────────────
 // Cualquiera de estos cancela el flujo activo y se procesa normalmente.
-const KNOWN_COMMANDS_RE = /^(catalogo|lista|productos|que tenes|que tienen|ver todo|ver catalogo|auto|autos|moto|motos|rod|camion|camiones|extravida|pesado|otros|otro|fluido|fluidos|destacados|populares|recomendados|vender|ventas?( hoy| semana)?|resumen|cuanto vendimos|que vendimos( hoy)?|top( \d+)?|ranking|mas vendidos|mejores|ayuda|help|hola|inicio|que puedo hacer|comandos|menu|salir|chau|chao|bye|exit|adios|cancelar)$/;
+const KNOWN_COMMANDS_RE = /^(catalogo|lista|productos|que tenes|que tienen|ver todo|ver catalogo|auto|autos|moto|motos|rod|camion|camiones|extravida|pesado|otros|otro|fluido|fluidos|destacados|populares|recomendados|vender|ventas?( hoy| semana)?|resumen|cuanto vendimos|que vendimos( hoy)?|top( \d+)?|ranking|mas vendidos|mejores|ayuda|help|hola|inicio|que puedo hacer|comandos|menu|salir|chau|chao|bye|exit|adios|cancelar|buscar|busca|busco|search|guia|guía|recomendacion|recomendación)(\s.+)?$/;
 
 // ─── Parser de intención — pipeline de 12 pasos ──────────────────────────────
 
@@ -126,6 +101,20 @@ function parseIntent(text, session) {
   if (ventaMatch) {
     const ventaArgs = ventaMatch[3] ? ventaMatch[3].split(/\s+/) : [];
     return { command: '!v', args: ventaArgs };
+  }
+
+  // 6b. Búsqueda inteligente
+  const buscarMatch = t.match(/^(buscar|busca|busco|search)(\s+(.+))?$/);
+  if (buscarMatch) {
+    const bArgs = buscarMatch[3] ? buscarMatch[3].split(/\s+/) : [];
+    return { command: '!buscar', args: bArgs };
+  }
+
+  // 6c. Guía de lubricación
+  const guiaMatch = t.match(/^(guia|guía|recomendacion|recomendación|que aceite|qué aceite)(\s+(.+))?$/);
+  if (guiaMatch) {
+    const gArgs = guiaMatch[3] ? guiaMatch[3].split(/\s+/) : [];
+    return { command: '!guia', args: gArgs };
   }
 
   // 7. Resumen de ventas
@@ -212,8 +201,8 @@ async function connect() {
       const jid = msg.key.remoteJid;
 
       // Avisar y bloquear números no autorizados
-      if (!msg.key.fromMe && !isAllowed(jid)) {
-        console.log(`[bloqueado] ${jid} — no está en ALLOWED_NUMBERS`);
+      if (!msg.key.fromMe && !(await isAllowed(jid))) {
+        console.log(`[bloqueado] ${jid} — no está en vendedores activos`);
         await send(sock, jid, 'Hola 👋 Este bot es de uso interno de CGS Paraguay. Si sos parte del equipo, pedile acceso al administrador.');
         continue;
       }

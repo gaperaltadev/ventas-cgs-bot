@@ -1,3 +1,6 @@
+import { handleBuscar } from './handlers/buscar.js';
+import { handleGuia } from './handlers/guia.js';
+
 const CATEGORY_LABELS = {
   elaion:    'ELAION — Autos',
   extravida: 'EXTRAVIDA — Camiones',
@@ -41,6 +44,8 @@ export async function handleCommand(command, args, supabase, session = {}) {
     case '!top':                    return cmdTop(supabase);
     case '!ayuda': case '!a':       return cmdAyuda();
     case '!salir':                  return cmdSalir(session);
+    case '!buscar': case '!b':      return handleBuscar(args);
+    case '!guia': case '!g':        return handleGuia(args);
     case '__select__':              return cmdSelect(args, session, supabase);
     case '__venta_flujo__':         return cmdVentaFlujo(args, supabase, session);
     case '__venta_cantidad__':      return cmdVentaCantidad(args, session, supabase);
@@ -527,21 +532,23 @@ function cmdAyuda() {
   return [
     '🤖 *CGS Bot — Qué puedo hacer*\n',
     '*Ver productos*',
-    '  /catalogo              → Lista completa con IDs',
-    '  /auto · /moto · /camion → Por categoría',
-    '  /3                     → Ficha del producto [3]',
-    '  /5w30 · /elaion        → Buscar por texto',
+    '  /catalogo                  → Lista completa con IDs',
+    '  /auto · /moto · /camion    → Por categoría',
+    '  /3                         → Ficha del producto [3]',
+    '  /buscar elaion 5w30        → Búsqueda inteligente',
+    '  /buscar helix              → Equivalentes a competencia',
+    '  /guia toyota corolla 2018  → Recomendación por vehículo',
     '',
     '*Registrar ventas*',
-    '  /vender                → Te guío paso a paso',
-    '  /vender 3              → 1 unidad del producto [3]',
-    '  /vender 3 2            → 2 unidades del producto [3]',
-    '  /vender 3 2, 7 1       → Varios productos a la vez',
+    '  /vender                    → Te guío paso a paso',
+    '  /vender 3                  → 1 unidad del producto [3]',
+    '  /vender 3 2                → 2 unidades del producto [3]',
+    '  /vender 3 2, 7 1           → Varios productos a la vez',
     '',
     '*Reportes*',
-    '  /ventas                → Lo que se vendió hoy',
-    '  /ventas semana         → Últimos 7 días',
-    '  /ranking               → Top 5 de la semana',
+    '  /ventas                    → Lo que se vendió hoy',
+    '  /ventas semana             → Últimos 7 días',
+    '  /ranking                   → Top 5 de la semana',
     '',
     '💡 Cuando aparezca una lista, escribí *1*, *2*... para elegir.',
     '💡 Escribí */salir* para cancelar lo que estés haciendo.'
