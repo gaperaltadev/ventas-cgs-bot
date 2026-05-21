@@ -8,6 +8,8 @@ Aplicar **en orden** desde Supabase → SQL Editor → New query → pegar y eje
 | 02 | `02-vendedores.sql` | ✅ | Tabla `vendedores` (reemplaza ALLOWED_NUMBERS) |
 | 03 | `03-search-products.sql` | ✅ | Búsqueda fuzzy de productos |
 | 04 | `04-vehicle-guide.sql` | ✅ | Guía de lubricación por vehículo |
+| 06 | `06-clientes.sql` | ✅ | Tabla `clientes` + búsqueda fuzzy |
+| 07 | `07-pedidos.sql` | ✅ | Tablas `pedidos` + `pedido_items` + RPC `crear_pedido` |
 
 Todos los scripts son idempotentes (usan `IF NOT EXISTS` / `CREATE OR REPLACE`). Se pueden re-ejecutar sin daño.
 

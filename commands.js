@@ -1,5 +1,14 @@
 import { handleBuscar } from './handlers/buscar.js';
 import { handleGuia } from './handlers/guia.js';
+import {
+  handlePedido,
+  handlePedidoBuscarCliente,
+  handlePedidoAltaCliente,
+  handlePedidoItems,
+  handlePedidoConfirmar,
+  handleSelectCliente
+} from './handlers/pedido.js';
+import { handleMisPedidos } from './handlers/mispedidos.js';
 
 const CATEGORY_LABELS = {
   elaion:    'ELAION — Autos',
@@ -33,7 +42,7 @@ const ERR = {
 
 // ─── Router ───────────────────────────────────────────────────────────────────
 
-export async function handleCommand(command, args, supabase, session = {}) {
+export async function handleCommand(command, args, supabase, session = {}, jid = '') {
   switch (command) {
     case '!catalogo': case '!c':    return cmdCatalogo(supabase);
     case '!producto': case '!p':    return cmdProducto(args, supabase);
@@ -46,9 +55,18 @@ export async function handleCommand(command, args, supabase, session = {}) {
     case '!salir':                  return cmdSalir(session);
     case '!buscar': case '!b':      return handleBuscar(args);
     case '!guia': case '!g':        return handleGuia(args);
-    case '__select__':              return cmdSelect(args, session, supabase);
+    case '!pedido':                 return handlePedido(args, jid);
+    case '!mispedidos':             return handleMisPedidos(args, jid);
+    case '__select__':
+      // Si lastAction es 'pedido', delegar al handler de selección de cliente
+      if (session.lastAction === 'pedido') return handleSelectCliente(args[0], session, jid);
+      return cmdSelect(args, session, supabase);
     case '__venta_flujo__':         return cmdVentaFlujo(args, supabase, session);
     case '__venta_cantidad__':      return cmdVentaCantidad(args, session, supabase);
+    case '__pedido_buscar_cliente__': return handlePedidoBuscarCliente(args, session, jid);
+    case '__pedido_alta_cliente__':   return handlePedidoAltaCliente(args, session, jid);
+    case '__pedido_items__':          return handlePedidoItems(args, session, jid);
+    case '__pedido_confirmar__':      return handlePedidoConfirmar(args, session, jid);
     default:                        return null;
   }
 }
@@ -539,11 +557,16 @@ function cmdAyuda() {
     '  /buscar helix              → Equivalentes a competencia',
     '  /guia toyota corolla 2018  → Recomendación por vehículo',
     '',
-    '*Registrar ventas*',
+    '*Registrar ventas rápidas*',
     '  /vender                    → Te guío paso a paso',
     '  /vender 3                  → 1 unidad del producto [3]',
     '  /vender 3 2                → 2 unidades del producto [3]',
     '  /vender 3 2, 7 1           → Varios productos a la vez',
+    '',
+    '*Pedidos con cliente*',
+    '  /pedido                    → Te guío paso a paso',
+    '  /pedido 80012345-1 20 5    → Atajo: RUC + items',
+    '  /mispedidos                → Tus últimos pedidos',
     '',
     '*Reportes*',
     '  /ventas                    → Lo que se vendió hoy',

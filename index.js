@@ -31,7 +31,7 @@ const PREFIX = process.env.BOT_PREFIX || '/';
 
 // ─── Comandos reconocidos para escape de flujo guiado ────────────────────────
 // Cualquiera de estos cancela el flujo activo y se procesa normalmente.
-const KNOWN_COMMANDS_RE = /^(catalogo|lista|productos|que tenes|que tienen|ver todo|ver catalogo|auto|autos|moto|motos|rod|camion|camiones|extravida|pesado|otros|otro|fluido|fluidos|destacados|populares|recomendados|vender|ventas?( hoy| semana)?|resumen|cuanto vendimos|que vendimos( hoy)?|top( \d+)?|ranking|mas vendidos|mejores|ayuda|help|hola|inicio|que puedo hacer|comandos|menu|salir|chau|chao|bye|exit|adios|cancelar|buscar|busca|busco|search|guia|guía|recomendacion|recomendación)(\s.+)?$/;
+const KNOWN_COMMANDS_RE = /^(catalogo|lista|productos|que tenes|que tienen|ver todo|ver catalogo|auto|autos|moto|motos|rod|camion|camiones|extravida|pesado|otros|otro|fluido|fluidos|destacados|populares|recomendados|vender|ventas?( hoy| semana)?|resumen|cuanto vendimos|que vendimos( hoy)?|top( \d+)?|ranking|mas vendidos|mejores|ayuda|help|hola|inicio|que puedo hacer|comandos|menu|salir|chau|chao|bye|exit|adios|cancelar|buscar|busca|busco|search|guia|guía|recomendacion|recomendación|pedido|pedidos|mispedidos|mis pedidos)(\s.+)?$/;
 
 // ─── Parser de intención — pipeline de 12 pasos ──────────────────────────────
 
@@ -55,6 +55,25 @@ function parseIntent(text, session) {
       return { command: '__venta_cantidad__', args: [t] };
     }
     // Si no es número → escape al pipeline normal (cancela el flujo)
+  }
+
+  // FlowSteps de /pedido
+  if (session?.flowStep === 'pedido_esperando_cliente'
+      && !KNOWN_COMMANDS_RE.test(t) && !t.startsWith('!')) {
+    return { command: '__pedido_buscar_cliente__', args: t.split(/\s+/) };
+  }
+  if (session?.flowStep === 'pedido_alta_cliente'
+      && !KNOWN_COMMANDS_RE.test(t) && !t.startsWith('!')) {
+    return { command: '__pedido_alta_cliente__', args: t.split(/\s+/) };
+  }
+  if (session?.flowStep === 'pedido_esperando_items'
+      && !KNOWN_COMMANDS_RE.test(t) && !t.startsWith('!')) {
+    return { command: '__pedido_items__', args: t.split(/\s+/) };
+  }
+  if (session?.flowStep === 'pedido_confirmando') {
+    if (/^(si|s|sí|ok|dale|confirmo|confirmar)$/.test(t)) return { command: '__pedido_confirmar__', args: ['si'] };
+    if (/^(no|n|cancela|cancelar)$/.test(t))               return { command: '__pedido_confirmar__', args: ['no'] };
+    // Cualquier otra cosa → escape (cancela el flujo)
   }
 
   // 1. Selección numérica de lista activa
@@ -116,6 +135,18 @@ function parseIntent(text, session) {
   if (guiaMatch) {
     const gArgs = guiaMatch[3] ? guiaMatch[3].split(/\s+/) : [];
     return { command: '!guia', args: gArgs };
+  }
+
+  // 6d. Pedido (cliente + items)
+  const pedidoMatch = t.match(/^(pedido)(\s+(.+))?$/);
+  if (pedidoMatch) {
+    const pArgs = pedidoMatch[3] ? pedidoMatch[3].split(/\s+/) : [];
+    return { command: '!pedido', args: pArgs };
+  }
+
+  // 6e. Mis pedidos (listado)
+  if (/^(mispedidos|mis pedidos|pedidos)$/.test(t)) {
+    return { command: '!mispedidos', args: [] };
   }
 
   // 7. Resumen de ventas
@@ -306,12 +337,17 @@ async function connect() {
       console.log(`[${new Date().toLocaleTimeString()}] ${jid.split('@')[0]} → ${cleanText}`);
 
       // Limpiar sesión si es un comando nuevo (no selección ni flujo activo)
-      const isFlowCommand = ['__select__', '__venta_flujo__', '__venta_cantidad__'].includes(command);
+      const isFlowCommand = [
+        '__select__',
+        '__venta_flujo__', '__venta_cantidad__',
+        '__pedido_buscar_cliente__', '__pedido_alta_cliente__',
+        '__pedido_items__', '__pedido_confirmar__'
+      ].includes(command);
       if (!isFlowCommand) {
         sessions.delete(jid);
       }
 
-      const result = await handleCommand(command, args, supabase, session);
+      const result = await handleCommand(command, args, supabase, session, jid);
       if (!result) continue;
 
       if (result?._session) {
