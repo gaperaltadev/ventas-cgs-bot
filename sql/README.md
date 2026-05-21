@@ -10,6 +10,7 @@ Aplicar **en orden** desde Supabase → SQL Editor → New query → pegar y eje
 | 04 | `04-vehicle-guide.sql` | ✅ | Guía de lubricación por vehículo |
 | 06 | `06-clientes.sql` | ✅ | Tabla `clientes` + búsqueda fuzzy |
 | 07 | `07-pedidos.sql` | ✅ | Tablas `pedidos` + `pedido_items` + RPC `crear_pedido` |
+| 08 | `08-admin-policies.sql` | ✅ | Políticas RLS para el panel admin (acceso para usuarios autenticados) |
 
 Todos los scripts son idempotentes (usan `IF NOT EXISTS` / `CREATE OR REPLACE`). Se pueden re-ejecutar sin daño.
 
