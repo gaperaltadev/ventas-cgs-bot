@@ -36,6 +36,23 @@ setResetHandler(() => forceResetAuth());
 setCircuitGetter(() => CIRCUIT);
 startAuthServer();
 
+// ─── Pause switch ────────────────────────────────────────────────────────────
+// Si BOT_PAUSED=true, el bot NO se conecta a WhatsApp. Útil para detener
+// intentos durante un ban sin tener que borrar el servicio en Railway.
+// El servidor web sigue corriendo y muestra el estado de pausa.
+if (process.env.BOT_PAUSED === 'true') {
+  console.log('');
+  console.log('⏸  ═══════════════════════════════════════════════════');
+  console.log('⏸  BOT_PAUSED=true — bot pausado intencionalmente.');
+  console.log('⏸  Las conexiones a WhatsApp están detenidas.');
+  console.log('⏸  Para reactivar: quitá BOT_PAUSED de las env vars y redeploy.');
+  console.log('⏸  ═══════════════════════════════════════════════════');
+  console.log('');
+  recordAuthError('Bot pausado por BOT_PAUSED=true. Quitá la variable y redeploy para reactivar.');
+} else {
+  connect();
+}
+
 // ─── Comandos reconocidos para escape de flujo guiado ────────────────────────
 // Cualquiera de estos cancela el flujo activo y se procesa normalmente.
 const KNOWN_COMMANDS_RE = /^(catalogo|lista|productos|que tenes|que tienen|ver todo|ver catalogo|auto|autos|moto|motos|rod|camion|camiones|extravida|pesado|otros|otro|fluido|fluidos|destacados|populares|recomendados|vender|ventas?( hoy| semana)?|resumen|cuanto vendimos|que vendimos( hoy)?|top( \d+)?|ranking|mas vendidos|mejores|ayuda|help|hola|inicio|que puedo hacer|comandos|menu|salir|chau|chao|bye|exit|adios|cancelar|buscar|busca|busco|search|guia|guía|recomendacion|recomendación|pedido|pedidos|mispedidos|mis pedidos)(\s.+)?$/;
@@ -524,4 +541,4 @@ async function send(sock, jid, text) {
   }
 }
 
-connect();
+// La llamada a connect() está condicionada por BOT_PAUSED más arriba.
