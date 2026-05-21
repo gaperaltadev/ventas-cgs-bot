@@ -3,6 +3,27 @@ import { createClient } from '@supabase/supabase-js';
 import qrcode from 'qrcode-terminal';
 import { handleCommand } from './commands.js';
 
+// ─── Validación de variables de entorno al arranque ──────────────────────────
+// Falla rápido con mensaje claro antes de que cualquier librería tire un stack trace.
+
+const REQUIRED_ENV = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY'];
+const RECOMMENDED_ENV = ['ALLOWED_NUMBERS', 'BOT_PREFIX'];
+
+const missing = REQUIRED_ENV.filter(k => !process.env[k]);
+if (missing.length) {
+  console.error('\n❌ Faltan variables de entorno obligatorias:\n');
+  missing.forEach(k => console.error(`   - ${k}`));
+  console.error('\nConfiguralas en Railway → Service → Variables, o en tu .env local.');
+  console.error('Referencia: .env.example\n');
+  process.exit(1);
+}
+
+const warnings = RECOMMENDED_ENV.filter(k => !process.env[k]);
+if (warnings.length) {
+  console.warn('⚠️  Variables recomendadas sin definir:', warnings.join(', '));
+  console.warn('   El bot va a arrancar igual pero con valores por defecto.\n');
+}
+
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_KEY
