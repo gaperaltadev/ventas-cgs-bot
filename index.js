@@ -4,7 +4,7 @@ import { promises as fs } from 'fs';
 import { handleCommand } from './commands.js';
 import { supabase } from './lib/supabase.js';
 import { sessions, isAllowed } from './lib/session.js';
-import { startAuthServer, updateAuthState, recordAuthError } from './lib/auth-server.js';
+import { startAuthServer, updateAuthState, recordAuthError, setResetHandler, setCircuitGetter } from './lib/auth-server.js';
 import { logEvent, getDisconnectReason } from './lib/diagnostics.js';
 
 // ─── Validación de variables de entorno al arranque ──────────────────────────
@@ -32,6 +32,8 @@ if (warnings.length) {
 const PREFIX = process.env.BOT_PREFIX || '/';
 
 // Servidor web de vinculación (QR + pairing code via UI)
+setResetHandler(() => forceResetAuth());
+setCircuitGetter(() => CIRCUIT);
 startAuthServer();
 
 // ─── Comandos reconocidos para escape de flujo guiado ────────────────────────
@@ -210,6 +212,44 @@ function nextReconnectDelay() {
   return Math.min(RECONNECT.base * Math.pow(2, RECONNECT.attempts), RECONNECT.cap);
 }
 
+// ─── Circuit breaker para prevenir bans ─────────────────────────────────────
+// Si WhatsApp devuelve 401 múltiples veces en sesiones nunca registradas
+// (es decir, fallos de pairing repetidos), abrimos el circuito y pausamos
+// todos los intentos por un tiempo largo. Esto evita el patrón "loop tight"
+// que históricamente causó el ban del número.
+export const CIRCUIT = {
+  open: false,
+  openedAt: 0,
+  pauseMs: 60 * 60 * 1000,       // 1 hora de pausa default
+  consecutiveAuthFailures: 0,    // 401s seguidos sin sesión registrada
+  threshold: 3                   // máximo permitido antes de abrir circuito
+};
+
+// Backoff exponencial para reintentos de pairing.
+// Cada fallo consecutivo escala el wait. Reset al primer éxito.
+const PAIRING_BACKOFF_MS = [
+  30_000,       // 30s
+  90_000,       // 1.5min
+  5 * 60_000,   // 5min
+  30 * 60_000,  // 30min
+  60 * 60_000   // 1hr (cap)
+];
+
+function nextPairingDelay(failures) {
+  return PAIRING_BACKOFF_MS[Math.min(failures, PAIRING_BACKOFF_MS.length - 1)];
+}
+
+// Helper para forzar reset manual desde el endpoint /api/reset
+export async function forceResetAuth() {
+  console.log('🔄 Reset manual solicitado: limpiando auth_info y reseteando circuit breaker');
+  await clearAuthInfo();
+  CIRCUIT.open = false;
+  CIRCUIT.openedAt = 0;
+  CIRCUIT.consecutiveAuthFailures = 0;
+  RECONNECT.attempts = 0;
+  setTimeout(connect, 1000);
+}
+
 // Pide el pairing code reintentando si la conexión todavía no está lista.
 // Baileys necesita que el WebSocket haya pasado el noise handshake;
 // en redes con latencia (Railway → Meta) eso puede tardar varios segundos.
@@ -249,20 +289,21 @@ function mostrarPairingCode(code, phoneNumber, attempt) {
 }
 
 async function connect() {
-  let { state, saveCreds } = await useMultiFileAuthState('auth_info');
-
-  // Si hay archivos en auth_info/ pero la sesión nunca completó el pairing,
-  // probablemente quedaron llaves criptográficas a medias de intentos
-  // anteriores. WhatsApp rechaza el handshake con "Connection Closed".
-  // Limpio y vuelvo a cargar el estado fresco.
-  if (!state.creds.registered) {
-    const files = await fs.readdir('auth_info').catch(() => []);
-    if (files.length > 0) {
-      console.log(`[auth] auth_info tiene ${files.length} archivos pero la sesión no está registrada → limpiando para evitar handshake corrupto`);
-      await clearAuthInfo();
-      ({ state, saveCreds } = await useMultiFileAuthState('auth_info'));
+  // Si el circuit breaker está abierto, no intentamos conectar.
+  if (CIRCUIT.open) {
+    const remainingMs = CIRCUIT.openedAt + CIRCUIT.pauseMs - Date.now();
+    if (remainingMs > 0) {
+      console.log(`🚫 Circuit breaker abierto. Restan ${Math.ceil(remainingMs/60000)} min antes de reintentar.`);
+      console.log(`   Para forzar reset: usá el botón en la UI o /api/reset?token=XXX`);
+      return;
     }
+    // Tiempo cumplido, cerrar circuit breaker
+    CIRCUIT.open = false;
+    CIRCUIT.consecutiveAuthFailures = 0;
+    console.log('✓ Circuit breaker cerrado, reintentando conexión...');
   }
+
+  const { state, saveCreds } = await useMultiFileAuthState('auth_info');
 
   const sock = makeWASocket({
     auth: state,
@@ -356,10 +397,37 @@ async function connect() {
       }
 
       if (code === DisconnectReason.loggedOut) {
-        console.log('⚠️  Sesión cerrada en WhatsApp. Limpiando credenciales y reiniciando...');
-        await clearAuthInfo();
-        RECONNECT.attempts = 0;
-        setTimeout(connect, 3000);
+        // CRÍTICO: diferenciar entre "logout real" y "pairing nunca completado"
+        // - Si la sesión SÍ estaba registrada → real logout, limpiar
+        // - Si NUNCA estuvo registrada → pairing falló, NO limpiar (eso amplía
+        //   el problema), aplicar backoff y eventualmente circuit-breaker
+        if (state.creds.registered) {
+          console.log('⚠️  Sesión cerrada en WhatsApp (logout real). Limpiando credenciales y reiniciando...');
+          await clearAuthInfo();
+          RECONNECT.attempts = 0;
+          CIRCUIT.consecutiveAuthFailures = 0;  // reset, era una sesión válida
+          setTimeout(connect, 5000);
+          return;
+        }
+
+        // 401 sin sesión registrada = fallo de pairing
+        CIRCUIT.consecutiveAuthFailures++;
+        console.log(`⚠️  Pairing fallido con 401 (intento ${CIRCUIT.consecutiveAuthFailures}/${CIRCUIT.threshold}). NO limpiamos auth_info.`);
+
+        if (CIRCUIT.consecutiveAuthFailures >= CIRCUIT.threshold) {
+          // Activar circuit breaker — el número probablemente está siendo limitado o baneado
+          CIRCUIT.open = true;
+          CIRCUIT.openedAt = Date.now();
+          recordAuthError(`Múltiples fallos de pairing detectados. Bot pausado ${CIRCUIT.pauseMs/60000} min para evitar ban permanente. Usá el botón "Reset manual" cuando hayas esperado al menos esa cantidad de tiempo.`);
+          console.error(`🚫 CIRCUIT BREAKER ACTIVADO. Pausando ${CIRCUIT.pauseMs/60000} min.`);
+          console.error(`   Para reactivar antes de tiempo: usá el botón en la UI o /api/reset?token=XXX`);
+          return;
+        }
+
+        // Backoff exponencial antes de reintentar
+        const wait = nextPairingDelay(CIRCUIT.consecutiveAuthFailures);
+        console.log(`⏱  Esperando ${wait/1000}s antes del próximo intento (backoff anti-ban)`);
+        setTimeout(connect, wait);
         return;
       }
 
