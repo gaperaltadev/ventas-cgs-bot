@@ -1,5 +1,6 @@
 import makeWASocket, { DisconnectReason, useMultiFileAuthState } from '@whiskeysockets/baileys';
 import qrcode from 'qrcode-terminal';
+import { promises as fs } from 'fs';
 import { handleCommand } from './commands.js';
 import { supabase } from './lib/supabase.js';
 import { sessions, isAllowed } from './lib/session.js';
@@ -144,6 +145,20 @@ function parseIntent(text, session) {
 
 // ─── Conexión WhatsApp ────────────────────────────────────────────────────────
 
+// Borra el contenido de auth_info/ pero deja la carpeta (sirve en Railway,
+// donde la carpeta es el mount point de un volumen y no puede eliminarse).
+async function clearAuthInfo() {
+  try {
+    const files = await fs.readdir('auth_info').catch(() => []);
+    await Promise.all(files.map(f =>
+      fs.rm(`auth_info/${f}`, { recursive: true, force: true })
+    ));
+    console.log(`[auth] auth_info limpiado (${files.length} archivos borrados)`);
+  } catch (e) {
+    console.error('[auth] no se pudo limpiar auth_info:', e.message);
+  }
+}
+
 async function connect() {
   const { state, saveCreds } = await useMultiFileAuthState('auth_info');
 
@@ -170,7 +185,7 @@ async function connect() {
     }
   }
 
-  sock.ev.on('connection.update', ({ connection, lastDisconnect, qr }) => {
+  sock.ev.on('connection.update', async ({ connection, lastDisconnect, qr }) => {
     if (qr && !process.env.PHONE_NUMBER) {
       console.log('\nEscaneá este QR (Dispositivos vinculados → Vincular dispositivo):\n');
       qrcode.generate(qr, { small: true });
@@ -179,10 +194,12 @@ async function connect() {
     if (connection === 'close') {
       const code = lastDisconnect?.error?.output?.statusCode;
       if (code === DisconnectReason.loggedOut) {
-        console.log('Sesión cerrada. Borrá auth_info/ y reiniciá.');
+        console.log('⚠️  Sesión cerrada en WhatsApp. Limpiando credenciales y reiniciando...');
+        await clearAuthInfo();
+        setTimeout(connect, 3000);
       } else {
         console.log('Reconectando...');
-        connect();
+        setTimeout(connect, 3000);
       }
     }
   });
