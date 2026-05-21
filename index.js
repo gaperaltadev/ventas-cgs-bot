@@ -5,6 +5,7 @@ import { handleCommand } from './commands.js';
 import { supabase } from './lib/supabase.js';
 import { sessions, isAllowed } from './lib/session.js';
 import { startAuthServer, updateAuthState, recordAuthError } from './lib/auth-server.js';
+import { logEvent, getDisconnectReason } from './lib/diagnostics.js';
 
 // ─── Validación de variables de entorno al arranque ──────────────────────────
 // Falla rápido con mensaje claro antes de que cualquier librería tire un stack trace.
@@ -189,8 +190,10 @@ async function clearAuthInfo() {
       fs.rm(`auth_info/${f}`, { recursive: true, force: true })
     ));
     console.log(`[auth] auth_info limpiado (${files.length} archivos borrados)`);
+    logEvent('auth_cleanup', { filesDeleted: files.length });
   } catch (e) {
     console.error('[auth] no se pudo limpiar auth_info:', e.message);
+    logEvent('auth_cleanup_error', { message: e.message });
   }
 }
 
@@ -280,9 +283,11 @@ async function connect() {
   async function ciclarPairingCode() {
     if (state.creds.registered) return;
     pairingAttempt++;
+    logEvent('pairing_attempt', { attempt: pairingAttempt });
     try {
       const code = await requestPairingWithRetry(sock, process.env.PHONE_NUMBER);
       mostrarPairingCode(code, process.env.PHONE_NUMBER, pairingAttempt);
+      logEvent('pairing_success', { attempt: pairingAttempt });
       updateAuthState({
         pairingCode: code,
         pairingGeneratedAt: Date.now(),
@@ -290,6 +295,7 @@ async function connect() {
       });
     } catch (e) {
       console.error(`[pairing] Error en intento ${pairingAttempt}:`, e.message);
+      logEvent('pairing_error', { attempt: pairingAttempt, message: e.message });
       recordAuthError(`Error al generar pairing code: ${e.message}`);
     }
   }
@@ -313,6 +319,7 @@ async function connect() {
     // ─── QR — siempre se captura para la página web de vinculación ───────
     if (qr) {
       updateAuthState({ qr });
+      logEvent('qr');
       // En terminal solo lo mostramos cuando NO hay PHONE_NUMBER (modo dev)
       if (!process.env.PHONE_NUMBER) {
         console.log('\nEscaneá este QR (Dispositivos vinculados → Vincular dispositivo):\n');
@@ -320,10 +327,15 @@ async function connect() {
       }
     }
 
+    if (connection === 'connecting') {
+      logEvent('connecting');
+    }
+
     // ─── Conexión exitosa: resetear contador ──────────────────────────────
     if (connection === 'open') {
       stopPairingTimer();
       updateAuthState({ connected: true, qr: null, pairingCode: null });
+      logEvent('open');
       console.log('✅ Bot conectado a WhatsApp');
       RECONNECT.attempts = 0;
     }
@@ -333,6 +345,15 @@ async function connect() {
       stopPairingTimer();
       updateAuthState({ connected: false });
       const code = lastDisconnect?.error?.output?.statusCode;
+      const message = lastDisconnect?.error?.message;
+      const reasonInfo = getDisconnectReason(code);
+      logEvent('close', { statusCode: code, message, reasonName: reasonInfo?.name });
+
+      // Log detallado en consola (Railway logs)
+      console.log(`[close] code=${code ?? '?'} reason=${reasonInfo?.name ?? 'unknown'} message="${message ?? ''}"`);
+      if (reasonInfo) {
+        console.log(`[close] interpretación: ${reasonInfo.meaning} (severidad: ${reasonInfo.severity})`);
+      }
 
       if (code === DisconnectReason.loggedOut) {
         console.log('⚠️  Sesión cerrada en WhatsApp. Limpiando credenciales y reiniciando...');
