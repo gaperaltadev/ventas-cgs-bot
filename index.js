@@ -172,6 +172,24 @@ function nextReconnectDelay() {
   return Math.min(RECONNECT.base * Math.pow(2, RECONNECT.attempts), RECONNECT.cap);
 }
 
+// Pide el pairing code reintentando si la conexión todavía no está lista.
+// Baileys necesita que el WebSocket haya pasado el noise handshake;
+// en redes con latencia (Railway → Meta) eso puede tardar varios segundos.
+async function requestPairingWithRetry(sock, phoneNumber, maxRetries = 4) {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      const code = await sock.requestPairingCode(phoneNumber);
+      return code;
+    } catch (e) {
+      const isClosed = /Connection Closed|not.*connected|timed.out/i.test(e.message);
+      if (!isClosed || i === maxRetries - 1) throw e;
+      const wait = 4000 + i * 2000;   // 4s, 6s, 8s, 10s
+      console.log(`[pairing] WS no listo, reintentando en ${wait/1000}s... (${i+1}/${maxRetries})`);
+      await new Promise(r => setTimeout(r, wait));
+    }
+  }
+}
+
 async function connect() {
   const { state, saveCreds } = await useMultiFileAuthState('auth_info');
 
@@ -184,37 +202,29 @@ async function connect() {
 
   sock.ev.on('creds.update', saveCreds);
 
-  // Estado local del intento actual de conexión
-  let pairingCodeRequested = false;
+  // ─── Pairing code: patrón canónico de Baileys ─────────────────────────
+  // Se pide inmediatamente después de crear el socket. El retry interno
+  // maneja el caso donde el WS todavía no completó el handshake.
+  if (process.env.PHONE_NUMBER && !state.creds.registered) {
+    requestPairingWithRetry(sock, process.env.PHONE_NUMBER)
+      .then(code => {
+        console.log(`\n══════════════════════════════`);
+        console.log(`  PAIRING CODE: ${code}`);
+        console.log(`  Para vincular el número ${process.env.PHONE_NUMBER}:`);
+        console.log(`  1. Abrí WhatsApp en ese teléfono`);
+        console.log(`  2. Configuración → Dispositivos vinculados`);
+        console.log(`  3. Vincular con número de teléfono`);
+        console.log(`  4. Ingresá el código de arriba`);
+        console.log(`  ⏱  Tenés ~60 segundos antes de que expire`);
+        console.log(`══════════════════════════════\n`);
+      })
+      .catch(e => {
+        console.error('[pairing] Error definitivo al solicitar código:', e.message);
+      });
+  }
 
   sock.ev.on('connection.update', async ({ connection, lastDisconnect, qr }) => {
-    // ─── Pairing code: pedirlo cuando el WS ya está 'connecting' ──────────
-    // Antes lo pedíamos con un setTimeout fijo de 3s lo cual era racey:
-    // a veces el socket todavía no estaba listo y fallaba con 'Connection Closed'.
-    if (
-      connection === 'connecting' &&
-      process.env.PHONE_NUMBER &&
-      !state.creds.registered &&
-      !pairingCodeRequested
-    ) {
-      pairingCodeRequested = true;
-      // Pequeño delay para que el handshake del WS termine
-      setTimeout(async () => {
-        try {
-          const code = await sock.requestPairingCode(process.env.PHONE_NUMBER);
-          console.log(`\n══════════════════════════════`);
-          console.log(`  PAIRING CODE: ${code}`);
-          console.log(`  WhatsApp → Dispositivos vinculados → Vincular con número`);
-          console.log(`  ⏱  Tenés ~60 segundos para ingresarlo`);
-          console.log(`══════════════════════════════\n`);
-        } catch (e) {
-          console.error('[pairing] Error al solicitar código:', e.message);
-          pairingCodeRequested = false;  // permite reintento si la conexión vuelve
-        }
-      }, 1500);
-    }
-
-    // ─── QR de fallback ───────────────────────────────────────────────────
+    // ─── QR de fallback (solo si NO hay PHONE_NUMBER) ─────────────────────
     if (qr && !process.env.PHONE_NUMBER) {
       console.log('\nEscaneá este QR (Dispositivos vinculados → Vincular dispositivo):\n');
       qrcode.generate(qr, { small: true });
