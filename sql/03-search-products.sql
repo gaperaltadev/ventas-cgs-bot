@@ -1,11 +1,10 @@
 -- ════════════════════════════════════════════════════════════════════════════
 -- 03 — Búsqueda fuzzy de productos
--- Agrega columna search_terms + RPC search_products_fuzzy (productos solos).
--- Las equivalencias de competencia se manejan en 05-product-equivalents.sql.
+-- Agrega columna search_terms + RPC search_products_fuzzy.
 -- Requiere: 01-extensions.sql
 -- ════════════════════════════════════════════════════════════════════════════
 
--- Si quedó la columna del intento anterior, sacarla.
+-- Si quedó la columna de intentos anteriores, sacarla.
 ALTER TABLE products DROP COLUMN IF EXISTS competitor_aliases;
 
 ALTER TABLE products
@@ -39,8 +38,7 @@ UPDATE products SET name = name;
 CREATE INDEX IF NOT EXISTS idx_products_search_trgm
   ON products USING gin (search_terms gin_trgm_ops);
 
--- RPC pública: búsqueda directa en productos (sin equivalencias).
--- 05-product-equivalents.sql REEMPLAZA esta función para incluir equivalentes.
+-- RPC pública: búsqueda fuzzy con score.
 CREATE OR REPLACE FUNCTION search_products_fuzzy(
   q TEXT,
   max_results INT DEFAULT 5
@@ -52,10 +50,7 @@ RETURNS TABLE (
   technology TEXT,
   category TEXT,
   badge TEXT,
-  score REAL,
-  matched_via TEXT,           -- 'direct' | 'equivalent'
-  equivalent_brand TEXT,      -- NULL salvo que se haya matcheado por equivalencia
-  equivalent_product TEXT
+  score REAL
 )
 LANGUAGE sql STABLE AS $$
   WITH n AS (SELECT lower(unaccent(q)) AS nq)
@@ -63,10 +58,7 @@ LANGUAGE sql STABLE AS $$
          GREATEST(
            similarity(p.search_terms, n.nq),
            CASE WHEN p.search_terms ILIKE '%' || n.nq || '%' THEN 0.5 ELSE 0 END
-         ) AS score,
-         'direct'::TEXT  AS matched_via,
-         NULL::TEXT      AS equivalent_brand,
-         NULL::TEXT      AS equivalent_product
+         ) AS score
   FROM products p, n
   WHERE p.search_terms % n.nq
      OR p.search_terms ILIKE '%' || n.nq || '%'
