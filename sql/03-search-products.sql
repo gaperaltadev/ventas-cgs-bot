@@ -11,16 +11,20 @@ ALTER TABLE products
   ADD COLUMN IF NOT EXISTS search_terms TEXT;
 
 -- Trigger que mantiene search_terms en sync con el resto de columnas.
+-- Strip hyphens así "5W-30" se vuelve "5w30" y matchea con queries sin guión.
 CREATE OR REPLACE FUNCTION build_product_search_terms()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
-  NEW.search_terms := lower(unaccent(
-    coalesce(NEW.name, '')                                || ' ' ||
-    coalesce(NEW.viscosity, '')                           || ' ' ||
-    coalesce(NEW.technology, '')                          || ' ' ||
-    coalesce(NEW.category, '')                            || ' ' ||
-    coalesce(array_to_string(NEW.applications, ' '), '')
-  ));
+  NEW.search_terms := regexp_replace(
+    lower(unaccent(
+      coalesce(NEW.name, '')                                || ' ' ||
+      coalesce(NEW.viscosity, '')                           || ' ' ||
+      coalesce(NEW.technology, '')                          || ' ' ||
+      coalesce(NEW.category, '')                            || ' ' ||
+      coalesce(array_to_string(NEW.applications, ' '), '')
+    )),
+    '-', '', 'g'
+  );
   RETURN NEW;
 END;
 $$;
@@ -57,31 +61,36 @@ RETURNS TABLE (
 )
 LANGUAGE sql STABLE AS $$
   WITH
-  -- 1. Tokenizar la query (descarta palabras de 1 char)
+  -- 1. Tokenizar la query (strip hyphens primero, después descartar 1-char)
   tokens AS (
     SELECT DISTINCT tok
     FROM unnest(
       string_to_array(
-        regexp_replace(lower(unaccent(q)), '[^a-z0-9 ]', ' ', 'g'),
+        regexp_replace(
+          regexp_replace(lower(unaccent(q)), '-', '', 'g'),
+          '[^a-z0-9 ]', ' ', 'g'
+        ),
         ' '
       )
     ) AS tok
     WHERE length(tok) > 1
   ),
 
-  -- 2. Por cada (producto, token), calcular score
+  -- 2. Por cada (producto, token), calcular score usando word_similarity
+  --    word_similarity busca el mejor match dentro del texto (no se diluye
+  --    con la longitud total como similarity).
   matches AS (
     SELECT
       p.id,
       t.tok,
       GREATEST(
-        similarity(p.search_terms, t.tok),
-        CASE WHEN p.search_terms ILIKE '%' || t.tok || '%' THEN 0.6 ELSE 0 END
+        word_similarity(t.tok, p.search_terms),
+        CASE WHEN p.search_terms ILIKE '%' || t.tok || '%' THEN 0.7 ELSE 0 END
       ) AS token_score
     FROM products p
     CROSS JOIN tokens t
     WHERE p.search_terms ILIKE '%' || t.tok || '%'
-       OR similarity(p.search_terms, t.tok) > 0.25
+       OR word_similarity(t.tok, p.search_terms) > 0.4
   ),
 
   -- 3. Agregar por producto
