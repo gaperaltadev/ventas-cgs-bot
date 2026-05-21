@@ -11,42 +11,74 @@
 --
 -- Para verificar: Supabase → Authentication → Providers → Email →
 -- "Enable email signups" debe estar OFF.
+--
+-- Requiere: 02-vendedores.sql, 04-vehicle-guide.sql, 06-clientes.sql,
+--           07-pedidos.sql aplicados previamente.
 -- ════════════════════════════════════════════════════════════════════════════
 
--- ─── vendedores ────────────────────────────────────────────────────────────
-DROP POLICY IF EXISTS "vendedores_service_role_all" ON vendedores;
-DROP POLICY IF EXISTS "vendedores_authenticated_all" ON vendedores;
-CREATE POLICY "vendedores_authenticated_all" ON vendedores
-  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+-- Aplica políticas solo sobre las tablas que existen.
+-- Si alguna falta, se omite con NOTICE en vez de fallar la migración.
+DO $$
+DECLARE
+  tbl TEXT;
+  pol TEXT;
+  tables_policies CONSTANT TEXT[][] := ARRAY[
+    ['vendedores',     'vendedores_authenticated_all'],
+    ['clientes',       'clientes_authenticated_all'],
+    ['pedidos',        'pedidos_authenticated_all'],
+    ['pedido_items',   'pedido_items_authenticated_all'],
+    ['vehicle_guide',  'vehicle_guide_authenticated_all']
+  ];
+  old_policies CONSTANT TEXT[][] := ARRAY[
+    ['vendedores',     'vendedores_service_role_all'],
+    ['clientes',       'clientes_service_role_only'],
+    ['pedidos',        'pedidos_service_role_only'],
+    ['pedido_items',   'pedido_items_service_role_only'],
+    ['vehicle_guide',  'vehicle_guide_service_role_only']
+  ];
+BEGIN
+  -- Drop políticas antiguas (restrictivas)
+  FOR i IN 1 .. array_length(old_policies, 1) LOOP
+    tbl := old_policies[i][1];
+    pol := old_policies[i][2];
+    IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = tbl) THEN
+      EXECUTE format('DROP POLICY IF EXISTS %I ON %I', pol, tbl);
+    END IF;
+  END LOOP;
 
--- ─── clientes ──────────────────────────────────────────────────────────────
-DROP POLICY IF EXISTS "clientes_service_role_only" ON clientes;
-DROP POLICY IF EXISTS "clientes_authenticated_all" ON clientes;
-CREATE POLICY "clientes_authenticated_all" ON clientes
-  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+  -- Crear/reemplazar políticas nuevas (permisivas para authenticated)
+  FOR i IN 1 .. array_length(tables_policies, 1) LOOP
+    tbl := tables_policies[i][1];
+    pol := tables_policies[i][2];
+    IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = tbl) THEN
+      EXECUTE format('DROP POLICY IF EXISTS %I ON %I', pol, tbl);
+      EXECUTE format(
+        'CREATE POLICY %I ON %I FOR ALL TO authenticated USING (true) WITH CHECK (true)',
+        pol, tbl
+      );
+      RAISE NOTICE 'Politica % aplicada en tabla %', pol, tbl;
+    ELSE
+      RAISE NOTICE 'Tabla % no existe — saltada. Ejecutar la migracion correspondiente primero.', tbl;
+    END IF;
+  END LOOP;
+END $$;
 
--- ─── pedidos ───────────────────────────────────────────────────────────────
-DROP POLICY IF EXISTS "pedidos_service_role_only" ON pedidos;
-DROP POLICY IF EXISTS "pedidos_authenticated_all" ON pedidos;
-CREATE POLICY "pedidos_authenticated_all" ON pedidos
-  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+-- ─── Permisos sobre la vista y RPCs (solo si existen) ──────────────────────
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_views WHERE schemaname = 'public' AND viewname = 'pedidos_resumen') THEN
+    GRANT SELECT ON pedidos_resumen TO authenticated;
+  END IF;
 
--- ─── pedido_items ──────────────────────────────────────────────────────────
-DROP POLICY IF EXISTS "pedido_items_service_role_only" ON pedido_items;
-DROP POLICY IF EXISTS "pedido_items_authenticated_all" ON pedido_items;
-CREATE POLICY "pedido_items_authenticated_all" ON pedido_items
-  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+  IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'search_products_fuzzy') THEN
+    GRANT EXECUTE ON FUNCTION search_products_fuzzy(TEXT, INT) TO authenticated;
+  END IF;
 
--- ─── vehicle_guide ─────────────────────────────────────────────────────────
-DROP POLICY IF EXISTS "vehicle_guide_service_role_only" ON vehicle_guide;
-DROP POLICY IF EXISTS "vehicle_guide_authenticated_all" ON vehicle_guide;
-CREATE POLICY "vehicle_guide_authenticated_all" ON vehicle_guide
-  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+  IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'search_vehicle_guide') THEN
+    GRANT EXECUTE ON FUNCTION search_vehicle_guide(TEXT, INT, INT) TO authenticated;
+  END IF;
 
--- ─── La vista pedidos_resumen necesita permitir SELECT a authenticated ────
-GRANT SELECT ON pedidos_resumen TO authenticated;
-
--- ─── Las RPCs de búsqueda fuzzy también ────────────────────────────────────
-GRANT EXECUTE ON FUNCTION search_products_fuzzy(TEXT, INT) TO authenticated;
-GRANT EXECUTE ON FUNCTION search_vehicle_guide(TEXT, INT, INT) TO authenticated;
-GRANT EXECUTE ON FUNCTION search_clientes_fuzzy(TEXT, INT) TO authenticated;
+  IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'search_clientes_fuzzy') THEN
+    GRANT EXECUTE ON FUNCTION search_clientes_fuzzy(TEXT, INT) TO authenticated;
+  END IF;
+END $$;
