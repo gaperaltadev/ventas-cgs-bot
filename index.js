@@ -221,6 +221,26 @@ async function requestPairingWithRetry(sock, phoneNumber, maxRetries = 4) {
   }
 }
 
+// Cada cuánto regeneramos el pairing code (debe ser < expiración de WhatsApp ~120s)
+const PAIRING_REFRESH_MS = 90 * 1000;
+
+function mostrarPairingCode(code, phoneNumber, attempt) {
+  const ahora = new Date().toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const renueva = new Date(Date.now() + PAIRING_REFRESH_MS).toLocaleTimeString('es-PY', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  console.log(`\n══════════════════════════════`);
+  console.log(`  PAIRING CODE: ${code}     ${attempt > 1 ? `(código #${attempt})` : ''}`);
+  console.log(`  Generado: ${ahora} · Se renueva: ${renueva}`);
+  console.log(``);
+  console.log(`  Para vincular ${phoneNumber}:`);
+  console.log(`  1. Abrí WhatsApp en ese teléfono`);
+  console.log(`  2. Configuración → Dispositivos vinculados`);
+  console.log(`  3. Vincular con número de teléfono`);
+  console.log(`  4. Ingresá el código de 8 caracteres`);
+  console.log(``);
+  console.log(`  💡 Si tardás, esperá al próximo código (cada 90s).`);
+  console.log(`══════════════════════════════\n`);
+}
+
 async function connect() {
   const { state, saveCreds } = await useMultiFileAuthState('auth_info');
 
@@ -233,25 +253,36 @@ async function connect() {
 
   sock.ev.on('creds.update', saveCreds);
 
-  // ─── Pairing code: patrón canónico de Baileys ─────────────────────────
-  // Se pide inmediatamente después de crear el socket. El retry interno
-  // maneja el caso donde el WS todavía no completó el handshake.
+  // ─── Pairing code con regeneración automática ─────────────────────────
+  // WhatsApp expira el código en ~120s. Lo regeneramos cada 90s para que
+  // siempre haya uno fresco en los logs. Se detiene cuando la conexión
+  // se abre o se cierra.
+  let pairingTimer = null;
+  let pairingAttempt = 0;
+
+  async function ciclarPairingCode() {
+    if (state.creds.registered) return;
+    pairingAttempt++;
+    try {
+      const code = await requestPairingWithRetry(sock, process.env.PHONE_NUMBER);
+      mostrarPairingCode(code, process.env.PHONE_NUMBER, pairingAttempt);
+    } catch (e) {
+      console.error(`[pairing] Error en intento ${pairingAttempt}:`, e.message);
+    }
+  }
+
   if (process.env.PHONE_NUMBER && !state.creds.registered) {
-    requestPairingWithRetry(sock, process.env.PHONE_NUMBER)
-      .then(code => {
-        console.log(`\n══════════════════════════════`);
-        console.log(`  PAIRING CODE: ${code}`);
-        console.log(`  Para vincular el número ${process.env.PHONE_NUMBER}:`);
-        console.log(`  1. Abrí WhatsApp en ese teléfono`);
-        console.log(`  2. Configuración → Dispositivos vinculados`);
-        console.log(`  3. Vincular con número de teléfono`);
-        console.log(`  4. Ingresá el código de arriba`);
-        console.log(`  ⏱  Tenés ~60 segundos antes de que expire`);
-        console.log(`══════════════════════════════\n`);
-      })
-      .catch(e => {
-        console.error('[pairing] Error definitivo al solicitar código:', e.message);
-      });
+    // Disparar el primero ya
+    ciclarPairingCode();
+    // Y renovar cada 90s
+    pairingTimer = setInterval(ciclarPairingCode, PAIRING_REFRESH_MS);
+  }
+
+  function stopPairingTimer() {
+    if (pairingTimer) {
+      clearInterval(pairingTimer);
+      pairingTimer = null;
+    }
   }
 
   sock.ev.on('connection.update', async ({ connection, lastDisconnect, qr }) => {
@@ -263,12 +294,14 @@ async function connect() {
 
     // ─── Conexión exitosa: resetear contador ──────────────────────────────
     if (connection === 'open') {
+      stopPairingTimer();
       console.log('✅ Bot conectado a WhatsApp');
       RECONNECT.attempts = 0;
     }
 
     // ─── Conexión cerrada: decidir reconexión vs logout ───────────────────
     if (connection === 'close') {
+      stopPairingTimer();
       const code = lastDisconnect?.error?.output?.statusCode;
 
       if (code === DisconnectReason.loggedOut) {
