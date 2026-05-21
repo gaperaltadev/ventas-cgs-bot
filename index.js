@@ -159,6 +159,19 @@ async function clearAuthInfo() {
   }
 }
 
+// ─── Política de reconexión ───────────────────────────────────────────────────
+const RECONNECT = {
+  attempts: 0,
+  max: 12,                       // máx 12 intentos antes de salir
+  base: 3000,                    // 3s inicial
+  cap: 60000                     // techo 60s
+};
+
+function nextReconnectDelay() {
+  // Backoff exponencial: 3, 6, 12, 24, 48, 60, 60, ...
+  return Math.min(RECONNECT.base * Math.pow(2, RECONNECT.attempts), RECONNECT.cap);
+}
+
 async function connect() {
   const { state, saveCreds } = await useMultiFileAuthState('auth_info');
 
@@ -171,36 +184,69 @@ async function connect() {
 
   sock.ev.on('creds.update', saveCreds);
 
-  // Pairing code (servidor): si hay PHONE_NUMBER y la sesión no está registrada
-  if (process.env.PHONE_NUMBER && !state.creds.registered) {
-    await new Promise(r => setTimeout(r, 3000));
-    try {
-      const code = await sock.requestPairingCode(process.env.PHONE_NUMBER);
-      console.log(`\n══════════════════════════════`);
-      console.log(`  PAIRING CODE: ${code}`);
-      console.log(`  WhatsApp → Dispositivos vinculados → Vincular con número`);
-      console.log(`══════════════════════════════\n`);
-    } catch (e) {
-      console.error('[pairing] Error al solicitar código:', e.message);
-    }
-  }
+  // Estado local del intento actual de conexión
+  let pairingCodeRequested = false;
 
   sock.ev.on('connection.update', async ({ connection, lastDisconnect, qr }) => {
+    // ─── Pairing code: pedirlo cuando el WS ya está 'connecting' ──────────
+    // Antes lo pedíamos con un setTimeout fijo de 3s lo cual era racey:
+    // a veces el socket todavía no estaba listo y fallaba con 'Connection Closed'.
+    if (
+      connection === 'connecting' &&
+      process.env.PHONE_NUMBER &&
+      !state.creds.registered &&
+      !pairingCodeRequested
+    ) {
+      pairingCodeRequested = true;
+      // Pequeño delay para que el handshake del WS termine
+      setTimeout(async () => {
+        try {
+          const code = await sock.requestPairingCode(process.env.PHONE_NUMBER);
+          console.log(`\n══════════════════════════════`);
+          console.log(`  PAIRING CODE: ${code}`);
+          console.log(`  WhatsApp → Dispositivos vinculados → Vincular con número`);
+          console.log(`  ⏱  Tenés ~60 segundos para ingresarlo`);
+          console.log(`══════════════════════════════\n`);
+        } catch (e) {
+          console.error('[pairing] Error al solicitar código:', e.message);
+          pairingCodeRequested = false;  // permite reintento si la conexión vuelve
+        }
+      }, 1500);
+    }
+
+    // ─── QR de fallback ───────────────────────────────────────────────────
     if (qr && !process.env.PHONE_NUMBER) {
       console.log('\nEscaneá este QR (Dispositivos vinculados → Vincular dispositivo):\n');
       qrcode.generate(qr, { small: true });
     }
-    if (connection === 'open')  console.log('✅ Bot conectado a WhatsApp');
+
+    // ─── Conexión exitosa: resetear contador ──────────────────────────────
+    if (connection === 'open') {
+      console.log('✅ Bot conectado a WhatsApp');
+      RECONNECT.attempts = 0;
+    }
+
+    // ─── Conexión cerrada: decidir reconexión vs logout ───────────────────
     if (connection === 'close') {
       const code = lastDisconnect?.error?.output?.statusCode;
+
       if (code === DisconnectReason.loggedOut) {
         console.log('⚠️  Sesión cerrada en WhatsApp. Limpiando credenciales y reiniciando...');
         await clearAuthInfo();
+        RECONNECT.attempts = 0;
         setTimeout(connect, 3000);
-      } else {
-        console.log('Reconectando...');
-        setTimeout(connect, 3000);
+        return;
       }
+
+      if (RECONNECT.attempts >= RECONNECT.max) {
+        console.error(`❌ ${RECONNECT.attempts} intentos de reconexión fallidos. Saliendo para que Railway reinicie el contenedor desde cero.`);
+        process.exit(1);
+      }
+
+      const delay = nextReconnectDelay();
+      RECONNECT.attempts++;
+      console.log(`Reconectando en ${delay / 1000}s (intento ${RECONNECT.attempts}/${RECONNECT.max})...`);
+      setTimeout(connect, delay);
     }
   });
 
