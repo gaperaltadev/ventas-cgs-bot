@@ -557,12 +557,19 @@
     <li><span>Antes de empezar</span><span class="toc-meta">Todos</span></li>
     <li><span>La regla básica: el prefijo <code>/</code></span><span class="toc-meta">Todos</span></li>
     <li><span>Buscar y consultar productos</span><span class="toc-meta">Vendedor</span></li>
-    <li><span>Registrar ventas</span><span class="toc-meta">Vendedor</span></li>
+    <li><span>Registrar ventas rápidas</span><span class="toc-meta">Vendedor</span></li>
+    <li><span>Pedidos con cliente</span><span class="toc-meta">Vendedor</span></li>
     <li><span>Ver reportes</span><span class="toc-meta">Todos</span></li>
-    <li><span>Administración</span><span class="toc-meta">Jefe</span></li>
+    <li><span>Panel de administración</span><span class="toc-meta">Jefe</span></li>
     <li><span>Problemas comunes</span><span class="toc-meta">Todos</span></li>
     <li><span>Lista completa de comandos</span><span class="toc-meta">Referencia</span></li>
   </ol>
+
+  <p style="margin-top:24px;color:var(--ink-500);font-size:13px;">
+    Los íconos al lado de cada sección indican a quién va dirigida:
+    <span class="role-badge vendedor">Vendedor</span>
+    <span class="role-badge jefe">Jefe</span>
+  </p>
 </section>
 
 <!-- ════════════════════════════════════════════════════════════════════
@@ -735,13 +742,19 @@
 </section>
 
 <!-- ════════════════════════════════════════════════════════════════════
-     4. VENTAS
+     4. VENTAS RÁPIDAS
      ════════════════════════════════════════════════════════════════════ -->
 <section class="section">
   <div class="section-header">
     <div class="section-num">4</div>
-    <h2>Registrar ventas <span class="role-badge vendedor">Vendedor</span></h2>
+    <h2>Registrar ventas rápidas <span class="role-badge vendedor">Vendedor</span></h2>
   </div>
+
+  <p class="lead">
+    Para ventas de mostrador donde no necesitás identificar al cliente
+    (consumidor final, atención rápida). Si la venta es para un cliente con
+    RUC, usá el comando <code>/pedido</code> de la sección 5.
+  </p>
 
   <h3>Forma fácil: el bot te guía</h3>
   <p>Si no querés acordarte de la sintaxis, escribí solo <code>/vender</code> y el
@@ -795,11 +808,113 @@
 </section>
 
 <!-- ════════════════════════════════════════════════════════════════════
-     5. REPORTES
+     5. PEDIDOS CON CLIENTE
      ════════════════════════════════════════════════════════════════════ -->
 <section class="section">
   <div class="section-header">
     <div class="section-num">5</div>
+    <h2>Pedidos con cliente <span class="role-badge vendedor">Vendedor</span></h2>
+  </div>
+
+  <p class="lead">
+    Para ventas de ruta donde tenés que dejar registrado <strong>qué cliente</strong>
+    compró cada producto. El bot identifica al cliente por su RUC y guarda el
+    pedido vinculado a vos como vendedor.
+  </p>
+
+  <h3>Forma fácil: el bot te guía</h3>
+  <p>Si no recordás el RUC del cliente o querés ver opciones, escribí solo
+  <code>/pedido</code>:</p>
+  <div class="command">
+    <span class="you">Tú:</span> /pedido<br>
+    <span class="bot">Bot:</span> ¿Para qué cliente? Escribí <strong>RUC</strong> o <strong>nombre</strong>.<br>
+    <br>
+    <span class="you">Tú:</span> san lorenzo<br>
+    <span class="bot">Bot:</span> Encontré varios clientes:<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;1. AUTOREPUESTOS SAN LORENZO SRL · RUC 80012345-1<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;2. LUBRICENTRO SAN LORENZO · RUC 80098765-3<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;👉 Escribí 1 o 2 para elegir.<br>
+    <br>
+    <span class="you">Tú:</span> 1<br>
+    <span class="bot">Bot:</span> ✅ Cliente: AUTOREPUESTOS SAN LORENZO SRL<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;¿Qué productos vas a cargar?<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;Formato: <strong>ID cantidad, ID cantidad...</strong><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;Ej: 20 5, 26 2<br>
+    <br>
+    <span class="you">Tú:</span> 20 5, 26 2<br>
+    <span class="bot">Bot:</span> <strong>Confirmá el pedido</strong><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;Cliente: AUTOREPUESTOS SAN LORENZO SRL<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;RUC: 80012345-1 · San Lorenzo<br>
+    <br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;• [20] ELAION F10 5W-30 ×5<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;• [26] EXTRAVIDA DX 15W-40 ×2<br>
+    <br>
+    &nbsp;&nbsp;&nbsp;&nbsp;Total: <strong>7 unidades</strong> (2 productos)<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;👉 Respondé <strong>si</strong> para confirmar o <strong>no</strong> para cancelar.<br>
+    <br>
+    <span class="you">Tú:</span> si<br>
+    <span class="bot">Bot:</span> ✅ <strong>Pedido #1042 registrado</strong><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;Cliente: AUTOREPUESTOS SAN LORENZO SRL<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;Total: 7 unidades · 2 productos<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;🕐 14:32
+  </div>
+
+  <h3>Cliente nuevo: alta automática</h3>
+  <p>Si el RUC que escribís no está cargado, el bot te lo dice y pregunta el
+  nombre del cliente para darlo de alta en el momento:</p>
+  <div class="command">
+    <span class="you">Tú:</span> /pedido 80099999-9<br>
+    <span class="bot">Bot:</span> No tengo registrado el RUC <strong>80099999-9</strong>.<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;👉 Mandame el <strong>nombre / razón social</strong> del cliente para darlo de alta.<br>
+    <br>
+    <span class="you">Tú:</span> Lubricentro El Roble SRL<br>
+    <span class="bot">Bot:</span> ✅ Cliente dado de alta: <strong>Lubricentro El Roble SRL</strong><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;¿Qué productos vas a cargar?
+  </div>
+
+  <h3>Atajos rápidos (cliente conocido + productos en un mensaje)</h3>
+  <table>
+    <thead>
+      <tr><th>Comando</th><th>Qué hace</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>/pedido 80012345-1</code></td><td>Cliente conocido, te pide los items</td></tr>
+      <tr><td><code>/pedido 80012345-1 20 5</code></td><td>Cliente + 1 producto, pide confirmación</td></tr>
+      <tr><td><code>/pedido 80012345-1 20 5, 26 2, 12 1</code></td><td>Cliente + multi-producto, pide confirmación</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Ver tus pedidos del día</h3>
+  <div class="command">
+    <span class="you">Tú:</span> /mispedidos<br>
+    <span class="bot">Bot:</span> 📦 <strong>Tus últimos 10 pedidos</strong><br>
+    <br>
+    &nbsp;&nbsp;&nbsp;&nbsp;#1042 · 21/05 14:32<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AUTOREPUESTOS SAN LORENZO SRL · San Lorenzo<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2 productos · 7 uds · confirmado<br>
+    <br>
+    &nbsp;&nbsp;&nbsp;&nbsp;#1041 · 21/05 11:15<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;LUBRICENTRO EL ROBLE · Asunción<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;1 producto · 3 uds · confirmado<br>
+    <span class="dim">&nbsp;&nbsp;&nbsp;&nbsp;...</span>
+  </div>
+
+  <div class="callout info">
+    <div>
+      <strong>Diferencia con <code>/vender</code>:</strong> <code>/vender</code>
+      es para ventas anónimas de mostrador (no se registra cliente).
+      <code>/pedido</code> es para ventas de ruta donde sí queda el cliente
+      vinculado, lo cual permite al jefe hacer reportes por cliente.
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     6. REPORTES
+     ════════════════════════════════════════════════════════════════════ -->
+<section class="section">
+  <div class="section-header">
+    <div class="section-num">6</div>
     <h2>Ver reportes</h2>
   </div>
 
@@ -837,78 +952,99 @@
 </section>
 
 <!-- ════════════════════════════════════════════════════════════════════
-     6. ADMINISTRACIÓN
-     ════════════════════════════════════════════════════════════════════ -->
-<section class="section">
-  <div class="section-header">
-    <div class="section-num">6</div>
-    <h2>Administración <span class="role-badge jefe">Jefe</span></h2>
-  </div>
-
-  <p class="lead">
-    Esta sección es para el administrador del sistema. Las tareas se hacen desde
-    el panel de Supabase (la base de datos en la nube).
-  </p>
-
-  <h3>Dar de alta a un vendedor</h3>
-  <ol>
-    <li>Entrá al panel de Supabase del proyecto CGS.</li>
-    <li>Andá a <strong>Table Editor</strong> → tabla <code>vendedores</code>.</li>
-    <li>Insertá una fila nueva con los siguientes campos:</li>
-  </ol>
-  <table>
-    <thead>
-      <tr><th>Campo</th><th>Valor</th></tr>
-    </thead>
-    <tbody>
-      <tr><td><code>telefono</code></td><td>Número completo sin <code>+</code> ni espacios. Ej: <code>595981234567</code></td></tr>
-      <tr><td><code>nombre</code></td><td>Nombre del vendedor</td></tr>
-      <tr><td><code>categorias</code></td><td>Array con las categorías que vende. Ej: <code>{elaion,extravida,moto,otros}</code></td></tr>
-      <tr><td><code>activo</code></td><td><code>true</code></td></tr>
-    </tbody>
-  </table>
-  <p>El bot lo reconoce en <strong>menos de 5 minutos</strong> (cache automático).</p>
-
-  <h3>Dar de baja a un vendedor</h3>
-  <p>Misma tabla, cambiá <code>activo</code> a <code>false</code>. No hace falta
-  borrar la fila — así se mantiene el historial de ventas.</p>
-
-  <h3>Cargar productos al catálogo</h3>
-  <p>Tabla <code>products</code> en Supabase. Campos importantes:</p>
-  <ul>
-    <li><code>name</code>, <code>category</code> (elaion / extravida / moto / otros), <code>viscosity</code>, <code>technology</code>, <code>specs</code></li>
-    <li><code>presentations</code>, <code>applications</code>: arrays de texto</li>
-    <li><code>featured</code>: marcar como destacado (<code>true</code>/<code>false</code>)</li>
-    <li><code>badge</code>: etiqueta opcional ("Más vendido", "Promoción", etc.)</li>
-  </ul>
-  <div class="callout info">
-    <div>
-      El campo <code>search_terms</code> se calcula automáticamente — no lo edites
-      a mano.
-    </div>
-  </div>
-
-  <h3>Cargar vehículos a la guía</h3>
-  <p>Tabla <code>vehicle_guide</code>. Campos:</p>
-  <ul>
-    <li><code>brand</code>, <code>model</code>, <code>year_from</code>, <code>year_to</code></li>
-    <li><code>engine_type</code>: <code>nafta</code> / <code>diesel</code> / <code>turbo</code> / <code>4t</code> / <code>2t</code> / <code>hibrido</code></li>
-    <li><code>recommended_product_id</code>: ID del producto sugerido</li>
-    <li><code>alternative_product_id</code>: ID alternativo (opcional)</li>
-    <li><code>notes</code>: comentario libre (ej: "Motor 1.8L 2ZR-FE")</li>
-  </ul>
-
-  <h3>Corregir o anular una venta</h3>
-  <p>Tabla <code>sales</code> en Supabase. Buscá el registro por <code>id</code>
-  o <code>created_at</code> y editalo o borralo según corresponda.</p>
-</section>
-
-<!-- ════════════════════════════════════════════════════════════════════
-     7. PROBLEMAS
+     7. PANEL DE ADMINISTRACIÓN
      ════════════════════════════════════════════════════════════════════ -->
 <section class="section">
   <div class="section-header">
     <div class="section-num">7</div>
+    <h2>Panel de administración <span class="role-badge jefe">Jefe</span></h2>
+  </div>
+
+  <p class="lead">
+    Toda la gestión de datos del sistema se hace desde el panel web
+    en <strong>cgs-paraguay.netlify.app/admin.html</strong>. No hace falta
+    saber SQL — son formularios normales.
+  </p>
+
+  <h3>Acceso</h3>
+  <ol>
+    <li>Abrí <code>cgs-paraguay.netlify.app/admin.html</code> en cualquier navegador.</li>
+    <li>Ingresá tu <strong>email</strong> y contraseña de admin.</li>
+    <li>Vas a ver un sidebar con todas las secciones de gestión.</li>
+  </ol>
+
+  <div class="callout info">
+    <div>
+      <strong>Sin sign-up público:</strong> nadie puede crearse cuenta. Las
+      cuentas de admin se crean desde Supabase → Authentication → Users → Add user.
+    </div>
+  </div>
+
+  <h3>Productos</h3>
+  <p>Catálogo de lubricantes que ve el bot y la landing pública. Campos clave:
+  nombre, categoría (ELAION / EXTRAVIDA / RÖD / Otros), viscosidad, tecnología,
+  specs, presentaciones, aplicaciones, badge, destacado.</p>
+
+  <h3>Guía de Vehículos</h3>
+  <p>Mapeo de qué lubricante recomendar para cada vehículo. Lo que devuelve
+  el comando <code>/guia</code> del bot.</p>
+  <ul>
+    <li><strong>Marca y modelo:</strong> obligatorios (ej: Toyota Corolla)</li>
+    <li><strong>Año desde / hasta:</strong> opcionales — vacío significa "sin restricción"</li>
+    <li><strong>Tipo de motor:</strong> nafta / diesel / turbo / híbrido / moto 4T / moto 2T</li>
+    <li><strong>Producto recomendado:</strong> obligatorio</li>
+    <li><strong>Alternativa:</strong> opcional (para clientes que buscan algo más económico)</li>
+    <li><strong>Notas técnicas:</strong> texto libre (ej: "Motor 1.8L 2ZR-FE")</li>
+  </ul>
+
+  <h3>Vendedores</h3>
+  <p>Lista de quienes pueden usar el bot. Si alguien no figura acá, el bot
+  no le responde.</p>
+  <ul>
+    <li><strong>Teléfono:</strong> formato internacional sin <code>+</code> ni espacios. Ej: <code>595981234567</code></li>
+    <li><strong>Nombre:</strong> visible en los reportes</li>
+    <li><strong>Categorías:</strong> qué tipo de productos vende (define qué notificaciones recibe en el futuro)</li>
+    <li><strong>Ciudades:</strong> separadas por coma</li>
+    <li><strong>Activo:</strong> tildá para que pueda usar el bot</li>
+  </ul>
+  <div class="callout">
+    <div>
+      <strong>Cómo dar de baja:</strong> destildar el "Activo" en vez de borrar
+      la fila. Así se mantiene el historial de ventas y pedidos. Eliminar
+      directamente falla si el vendedor tiene pedidos asociados.
+    </div>
+  </div>
+  <p>El bot detecta los cambios en <strong>máximo 5 minutos</strong> (cache automático).</p>
+
+  <h3>Clientes</h3>
+  <p>Base de clientes identificados por RUC. Si bien el bot puede dar de alta
+  clientes nuevos durante un pedido, desde acá podés:</p>
+  <ul>
+    <li>Corregir typos en razones sociales que los vendedores cargaron rápido</li>
+    <li>Pre-cargar clientes habituales antes de la primera visita</li>
+    <li>Agregar contacto, teléfono, notas internas</li>
+  </ul>
+  <p>El RUC es el identificador y no se puede modificar después de crear.</p>
+
+  <h3>Pedidos</h3>
+  <p>Visualización de todos los pedidos registrados por el equipo. Es <strong>solo lectura</strong>:
+  los pedidos se crean exclusivamente desde el bot.</p>
+  <ul>
+    <li>Filtrá por período: hoy, últimos 7 días, último mes, todo</li>
+    <li>Buscá por cliente, RUC o vendedor</li>
+    <li>Click en el ícono de ojo para ver el detalle: items, cantidades, notas</li>
+  </ul>
+
+  <h3>Configuración</h3>
+  <p>Cambiar contraseña, configurar el botón de WhatsApp de la landing pública.</p>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     8. PROBLEMAS
+     ════════════════════════════════════════════════════════════════════ -->
+<section class="section">
+  <div class="section-header">
+    <div class="section-num">8</div>
     <h2>Problemas comunes</h2>
   </div>
 
@@ -940,11 +1076,11 @@
 </section>
 
 <!-- ════════════════════════════════════════════════════════════════════
-     8. LISTA DE COMANDOS
+     9. LISTA DE COMANDOS
      ════════════════════════════════════════════════════════════════════ -->
 <section class="section">
   <div class="section-header">
-    <div class="section-num">8</div>
+    <div class="section-num">9</div>
     <h2>Lista completa de comandos</h2>
   </div>
 
@@ -960,10 +1096,14 @@
       <tr><td><code>/</code><em>ID</em></td><td>Ficha del producto con ese ID</td><td>Todos</td></tr>
       <tr><td><code>/auto</code> · <code>/moto</code> · <code>/camion</code> · <code>/otros</code></td><td>Productos por categoría</td><td>Todos</td></tr>
       <tr><td><code>/destacados</code></td><td>Productos marcados como destacados</td><td>Todos</td></tr>
-      <tr><td><code>/vender</code></td><td>Registrar venta (flujo guiado)</td><td>Vendedor</td></tr>
-      <tr><td><code>/vender</code> <em>ID</em></td><td>Registrar 1 unidad del producto [ID]</td><td>Vendedor</td></tr>
-      <tr><td><code>/vender</code> <em>ID N</em></td><td>Registrar N unidades del producto [ID]</td><td>Vendedor</td></tr>
+      <tr><td><code>/vender</code></td><td>Venta rápida sin cliente (flujo guiado)</td><td>Vendedor</td></tr>
+      <tr><td><code>/vender</code> <em>ID</em></td><td>Venta rápida — 1 unidad del producto [ID]</td><td>Vendedor</td></tr>
+      <tr><td><code>/vender</code> <em>ID N</em></td><td>Venta rápida — N unidades del producto [ID]</td><td>Vendedor</td></tr>
       <tr><td><code>/vender</code> <em>ID N, ID N</em></td><td>Multi-venta en un solo mensaje</td><td>Vendedor</td></tr>
+      <tr><td><code>/pedido</code></td><td>Pedido con cliente (flujo guiado)</td><td>Vendedor</td></tr>
+      <tr><td><code>/pedido</code> <em>RUC</em></td><td>Pedido — cliente conocido, pide items</td><td>Vendedor</td></tr>
+      <tr><td><code>/pedido</code> <em>RUC ID N, ID N</em></td><td>Pedido atajo — cliente + items + confirmación</td><td>Vendedor</td></tr>
+      <tr><td><code>/mispedidos</code></td><td>Tus últimos 10 pedidos</td><td>Vendedor</td></tr>
       <tr><td><code>/ventas</code></td><td>Resumen de ventas de hoy</td><td>Todos</td></tr>
       <tr><td><code>/ventas semana</code></td><td>Resumen de los últimos 7 días</td><td>Todos</td></tr>
       <tr><td><code>/ranking</code> · <code>/top</code></td><td>Top 5 productos de la semana</td><td>Todos</td></tr>
