@@ -4,176 +4,501 @@
 <meta charset="UTF-8">
 <title>Manual de uso — CGS Bot</title>
 <style>
-  /* ─── Reset + tipografía ─── */
+  /* ════════════════════════════════════════════════════════════════════
+     DESIGN TOKENS
+     ════════════════════════════════════════════════════════════════════ */
+  :root {
+    /* Color */
+    --primary:        #0451DD;
+    --primary-dark:   #003BB0;
+    --primary-soft:   #E8EFFE;
+    --primary-tint:   #F4F7FE;
+
+    --ink-900: #0B1426;
+    --ink-700: #1F2A44;
+    --ink-500: #5B6478;
+    --ink-300: #B6BFD0;
+    --ink-200: #D9DEEA;
+    --ink-100: #ECEFF5;
+    --ink-50:  #F7F9FC;
+    --white:   #FFFFFF;
+
+    --success: #047857;
+    --success-soft: #ECFDF5;
+    --warning: #B45309;
+    --warning-soft: #FFFBEB;
+
+    /* Spacing scale */
+    --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px;
+    --s-5: 24px; --s-6: 32px; --s-7: 48px; --s-8: 64px; --s-9: 96px;
+
+    /* Type scale */
+    --t-display: 56px;
+    --t-h1: 42px;
+    --t-h2: 26px;
+    --t-h3: 18px;
+    --t-h4: 14px;
+    --t-body: 14px;
+    --t-small: 12px;
+    --t-mono: 13px;
+
+    /* Misc */
+    --radius-sm: 4px;
+    --radius:    8px;
+    --radius-lg: 12px;
+    --shadow-sm: 0 1px 2px rgba(11,20,38,.06);
+    --shadow:    0 4px 12px rgba(11,20,38,.08);
+  }
+
+  /* ════════════════════════════════════════════════════════════════════
+     RESET / BASE
+     ════════════════════════════════════════════════════════════════════ */
   *, *::before, *::after { box-sizing: border-box; }
   html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    line-height: 1.55;
-    color: #1a2236;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    font-size: var(--t-body);
+    line-height: 1.6;
+    color: var(--ink-700);
     margin: 0;
-    background: #fff;
+    background: var(--white);
+    font-feature-settings: 'kern','liga','ss01';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
   .page {
-    max-width: 760px;
+    max-width: 780px;
     margin: 0 auto;
-    padding: 48px 56px;
+    padding: var(--s-7) var(--s-8);
   }
 
-  /* ─── Tipografía ─── */
-  h1, h2, h3, h4 { color: #0451DD; margin: 0 0 .5em; line-height: 1.2; }
-  h1 { font-size: 38px; font-weight: 800; }
-  h2 { font-size: 26px; font-weight: 700; border-bottom: 3px solid #0451DD; padding-bottom: .35em; margin-top: 2em; }
-  h3 { font-size: 18px; font-weight: 600; margin-top: 1.4em; color: #1a2236; }
-  h4 { font-size: 15px; font-weight: 600; margin-top: 1.2em; color: #0451DD; }
-  p  { margin: 0 0 .8em; }
-  ul { margin: 0 0 1em; padding-left: 22px; }
-  li { margin-bottom: .35em; }
-  strong { color: #0451DD; }
+  /* ════════════════════════════════════════════════════════════════════
+     TIPOGRAFÍA
+     ════════════════════════════════════════════════════════════════════ */
+  h1, h2, h3, h4 {
+    color: var(--ink-900);
+    margin: 0;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+  }
+  h1 { font-size: var(--t-h1); font-weight: 800; letter-spacing: -0.02em; }
+  h2 { font-size: var(--t-h2); font-weight: 700; }
+  h3 { font-size: var(--t-h3); font-weight: 600; }
+  h4 { font-size: var(--t-h4); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--primary); }
 
-  /* ─── Portada ─── */
+  p { margin: 0 0 var(--s-3); }
+
+  ul, ol { margin: var(--s-3) 0 var(--s-4); padding-left: var(--s-5); }
+  li { margin-bottom: var(--s-2); padding-left: var(--s-1); }
+  li::marker { color: var(--primary); font-weight: 600; }
+  ul li { list-style: none; position: relative; padding-left: var(--s-4); }
+  ul li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.62em;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--primary);
+  }
+
+  strong { color: var(--ink-900); font-weight: 600; }
+  em { color: var(--ink-700); font-style: normal; font-weight: 500; }
+
+  code {
+    background: var(--primary-soft);
+    color: var(--primary-dark);
+    padding: 1px 6px;
+    border-radius: var(--radius-sm);
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: var(--t-mono);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  /* ════════════════════════════════════════════════════════════════════
+     SECTIONS / HEADERS
+     ════════════════════════════════════════════════════════════════════ */
+  .section {
+    page-break-before: always;
+    padding-top: var(--s-5);
+  }
+  .section:first-of-type { page-break-before: auto; }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: var(--s-4);
+    margin-bottom: var(--s-6);
+    padding-bottom: var(--s-4);
+    border-bottom: 1px solid var(--ink-200);
+  }
+  .section-num {
+    flex: 0 0 auto;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: var(--white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 18px;
+    letter-spacing: -0.02em;
+  }
+  .section-header h2 { margin: 0; flex: 1; }
+
+  h3 {
+    margin-top: var(--s-6);
+    margin-bottom: var(--s-3);
+    position: relative;
+    padding-left: var(--s-4);
+  }
+  h3::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.18em;
+    width: 4px;
+    height: 0.95em;
+    background: var(--primary);
+    border-radius: 2px;
+  }
+
+  h4 {
+    margin-top: var(--s-5);
+    margin-bottom: var(--s-2);
+  }
+
+  /* ════════════════════════════════════════════════════════════════════
+     PORTADA
+     ════════════════════════════════════════════════════════════════════ */
   .cover {
-    min-height: calc(100vh - 96px);
+    min-height: 100vh;
+    display: grid;
+    grid-template-rows: 1fr auto;
+    padding: 0;
+    margin: 0;
+    page-break-after: always;
+    background: var(--white);
+  }
+  .cover-band {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: var(--white);
+    padding: var(--s-9) var(--s-8) var(--s-8);
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    page-break-after: always;
+    justify-content: space-between;
   }
-  .cover .logo { width: 220px; margin-bottom: 32px; }
-  .cover h1 { font-size: 48px; margin-bottom: .25em; }
-  .cover .subtitle { font-size: 20px; color: #4a5874; margin-bottom: 64px; }
-  .cover .meta {
+  .cover-band .logo {
+    width: 140px;
+    filter: brightness(0) invert(1);
+  }
+  .cover-band .tag {
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-size: 11px;
+    font-weight: 700;
+    opacity: 0.7;
+    margin-top: var(--s-8);
+  }
+  .cover-content {
+    padding: var(--s-8);
+    background: var(--white);
+  }
+  .cover-title {
+    font-size: var(--t-display);
+    font-weight: 800;
+    color: var(--ink-900);
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    margin: 0 0 var(--s-3);
+  }
+  .cover-title em {
+    color: var(--primary);
+    font-style: normal;
+    font-weight: 800;
+  }
+  .cover-subtitle {
+    font-size: 18px;
+    color: var(--ink-500);
+    margin: 0 0 var(--s-6);
+    line-height: 1.4;
+  }
+  .cover-meta {
+    display: flex;
+    gap: var(--s-6);
+    padding-top: var(--s-5);
+    border-top: 2px solid var(--primary);
+    margin-top: var(--s-7);
+  }
+  .cover-meta-item .label {
+    text-transform: uppercase;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--ink-500);
+    margin-bottom: var(--s-1);
+  }
+  .cover-meta-item .value {
     font-size: 14px;
-    color: #6b7891;
-    border-top: 1px solid #d6dbe6;
-    padding-top: 20px;
-    margin-top: auto;
+    font-weight: 600;
+    color: var(--ink-900);
   }
 
-  /* ─── Bloques especiales ─── */
+  /* ════════════════════════════════════════════════════════════════════
+     TOC
+     ════════════════════════════════════════════════════════════════════ */
   .toc {
-    background: #f4f7fc;
-    border-radius: 8px;
-    padding: 24px 32px;
-    margin: 2em 0;
+    page-break-before: always;
+    page-break-after: always;
+    padding-top: var(--s-7);
   }
-  .toc h3 { margin-top: 0; color: #0451DD; }
-  .toc ol { margin: 0; padding-left: 22px; }
-  .toc li { margin-bottom: .4em; font-size: 15px; }
+  .toc h2 {
+    font-size: var(--t-h2);
+    margin-bottom: var(--s-6);
+    padding-bottom: var(--s-3);
+    border-bottom: 3px solid var(--primary);
+  }
+  .toc-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    counter-reset: toc;
+  }
+  .toc-list li {
+    counter-increment: toc;
+    display: flex;
+    align-items: baseline;
+    padding: var(--s-3) 0;
+    border-bottom: 1px solid var(--ink-100);
+    font-size: 16px;
+    color: var(--ink-900);
+  }
+  .toc-list li::marker, .toc-list li::before { content: none; display: none; }
+  .toc-list li::after {
+    content: counter(toc, decimal-leading-zero);
+    color: var(--primary);
+    font-weight: 700;
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.05em;
+    order: 0;
+    margin-right: var(--s-4);
+    min-width: 36px;
+  }
+  .toc-list li span { flex: 1; order: 1; }
+  .toc-list li .toc-meta {
+    color: var(--ink-500);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 600;
+    order: 2;
+    margin-left: var(--s-4);
+  }
 
+  /* ════════════════════════════════════════════════════════════════════
+     COMMAND BLOCK
+     ════════════════════════════════════════════════════════════════════ */
   .command {
-    background: #1a2236;
-    color: #e8eef9;
-    padding: 14px 18px;
-    border-radius: 6px;
-    font-family: 'Consolas', 'Monaco', monospace;
-    font-size: 14px;
-    margin: .8em 0;
-    border-left: 4px solid #0451DD;
+    position: relative;
+    background: var(--ink-900);
+    color: #E2E8F0;
+    padding: var(--s-5) var(--s-5);
+    padding-top: var(--s-7);
+    border-radius: var(--radius);
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: var(--t-mono);
+    line-height: 1.7;
+    margin: var(--s-4) 0;
+    overflow: hidden;
   }
-  .command .you { color: #6ee7b7; }
-  .command .bot { color: #93c5fd; }
-  .command .note { color: #94a3b8; font-style: italic; }
+  .command::before {
+    content: 'EJEMPLO';
+    position: absolute;
+    top: var(--s-3);
+    right: var(--s-4);
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    font-weight: 700;
+    color: var(--ink-500);
+    font-family: -apple-system, sans-serif;
+  }
+  .command::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 4px;
+    height: 100%;
+    background: var(--primary);
+  }
+  .command .you { color: #6EE7B7; font-weight: 700; }
+  .command .bot { color: #93C5FD; font-weight: 700; }
+  .command .note { color: #94A3B8; font-style: italic; opacity: 0.8; }
+  .command .dim { color: #94A3B8; }
 
+  /* ════════════════════════════════════════════════════════════════════
+     CALLOUTS
+     ════════════════════════════════════════════════════════════════════ */
   .callout {
-    background: #fffbeb;
-    border-left: 4px solid #f59e0b;
-    padding: 14px 18px;
-    border-radius: 4px;
-    margin: 1em 0;
-    font-size: 14px;
+    display: flex;
+    gap: var(--s-3);
+    padding: var(--s-4) var(--s-5);
+    border-radius: var(--radius);
+    margin: var(--s-4) 0;
+    font-size: var(--t-body);
+    line-height: 1.55;
+    border-left: 4px solid var(--warning);
+    background: var(--warning-soft);
   }
-  .callout strong { color: #b45309; }
+  .callout::before {
+    content: '!';
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--warning);
+    color: var(--white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 13px;
+    margin-top: 1px;
+  }
+  .callout > div { flex: 1; }
+  .callout strong { color: var(--warning); }
 
   .callout.success {
-    background: #ecfdf5;
-    border-left-color: #10b981;
+    border-left-color: var(--success);
+    background: var(--success-soft);
   }
-  .callout.success strong { color: #047857; }
+  .callout.success::before {
+    content: '✓';
+    background: var(--success);
+  }
+  .callout.success strong { color: var(--success); }
 
   .callout.info {
-    background: #eff6ff;
-    border-left-color: #0451DD;
+    border-left-color: var(--primary);
+    background: var(--primary-soft);
   }
+  .callout.info::before {
+    content: 'i';
+    background: var(--primary);
+    font-family: Georgia, serif;
+    font-style: italic;
+  }
+  .callout.info strong { color: var(--primary); }
 
+  /* ════════════════════════════════════════════════════════════════════
+     TABLAS
+     ════════════════════════════════════════════════════════════════════ */
   table {
     width: 100%;
     border-collapse: collapse;
-    margin: 1em 0;
-    font-size: 14px;
+    margin: var(--s-4) 0;
+    font-size: var(--t-body);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: 0 0 0 1px var(--ink-200);
   }
-  th, td {
-    text-align: left;
-    padding: 10px 14px;
-    border-bottom: 1px solid #d6dbe6;
-  }
+  thead { background: var(--primary-tint); }
   th {
-    background: #f4f7fc;
-    font-weight: 600;
-    color: #0451DD;
-  }
-  code {
-    background: #f4f7fc;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-family: 'Consolas', 'Monaco', monospace;
-    font-size: 13px;
-    color: #0451DD;
-    font-weight: 600;
-  }
-
-  .role-badge {
-    display: inline-block;
-    font-size: 11px;
+    text-align: left;
+    padding: var(--s-3) var(--s-4);
     font-weight: 700;
-    padding: 3px 10px;
-    border-radius: 10px;
+    font-size: 11px;
     text-transform: uppercase;
-    letter-spacing: .5px;
+    letter-spacing: 0.08em;
+    color: var(--primary);
+    border-bottom: 2px solid var(--primary-soft);
+  }
+  td {
+    padding: var(--s-3) var(--s-4);
+    border-bottom: 1px solid var(--ink-100);
+    vertical-align: top;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:nth-child(even) { background: var(--ink-50); }
+
+  /* ════════════════════════════════════════════════════════════════════
+     ROLE BADGES
+     ════════════════════════════════════════════════════════════════════ */
+  .role-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
     vertical-align: middle;
-    margin-left: 8px;
+    margin-left: var(--s-3);
   }
-  .role-badge.vendedor { background: #ecfdf5; color: #047857; }
-  .role-badge.jefe { background: #eff6ff; color: #0451DD; }
+  .role-badge::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+  }
+  .role-badge.vendedor { background: var(--success-soft); color: var(--success); }
+  .role-badge.vendedor::before { background: var(--success); }
+  .role-badge.jefe { background: var(--primary-soft); color: var(--primary); }
+  .role-badge.jefe::before { background: var(--primary); }
 
-  /* ─── Footer ─── */
-  .footer {
-    border-top: 1px solid #d6dbe6;
-    padding-top: 20px;
-    margin-top: 60px;
-    font-size: 12px;
-    color: #6b7891;
+  /* ════════════════════════════════════════════════════════════════════
+     UTILS
+     ════════════════════════════════════════════════════════════════════ */
+  .lead {
+    font-size: 16px;
+    color: var(--ink-500);
+    line-height: 1.6;
+    margin-bottom: var(--s-5);
+  }
+
+  .footer-page {
+    page-break-before: always;
+    padding-top: var(--s-8);
     text-align: center;
+    color: var(--ink-500);
+    font-size: var(--t-small);
   }
 
-  /* ─── Print ─── */
+  /* ════════════════════════════════════════════════════════════════════
+     PRINT
+     ════════════════════════════════════════════════════════════════════ */
   @page {
     size: A4;
-    margin: 16mm;
+    margin: 16mm 14mm;
   }
   @media print {
-    body { font-size: 12pt; }
+    body { font-size: 11pt; }
     .page { padding: 0; max-width: none; }
-    h2 { page-break-before: auto; page-break-after: avoid; }
+    h2 { page-break-after: avoid; }
     h3, h4 { page-break-after: avoid; }
-    .command, .callout, table { page-break-inside: avoid; }
-    .no-print { display: none; }
-    .cover { min-height: 90vh; }
+    .command, .callout, table, .section-header { page-break-inside: avoid; }
+    .no-print { display: none !important; }
+    .cover-band { min-height: 50vh; }
   }
 
-  /* ─── Print hint banner (solo en pantalla) ─── */
+  /* Banner solo en pantalla */
   .print-hint {
     position: fixed;
-    top: 16px;
-    right: 16px;
-    background: #0451DD;
+    top: var(--s-4);
+    right: var(--s-4);
+    background: var(--primary);
     color: white;
     padding: 10px 18px;
-    border-radius: 6px;
+    border-radius: var(--radius);
     font-size: 13px;
-    box-shadow: 0 4px 12px rgba(4,81,221,.3);
+    font-weight: 500;
+    box-shadow: 0 8px 24px rgba(4,81,221,.25);
     z-index: 10;
   }
   .print-hint strong { color: white; }
@@ -182,388 +507,481 @@
 <body>
 
 <div class="print-hint no-print">
-  📄 Para guardar como PDF: <strong>Ctrl+P</strong> → <strong>Guardar como PDF</strong>
+  📄 Guardá como PDF: <strong>Ctrl+P → Guardar como PDF</strong>
 </div>
 
-<div class="page">
-
-<!-- ══════════════════════════════════════════════════ -->
-<!-- PORTADA                                            -->
-<!-- ══════════════════════════════════════════════════ -->
+<!-- ════════════════════════════════════════════════════════════════════
+     PORTADA
+     ════════════════════════════════════════════════════════════════════ -->
 <section class="cover">
-  <svg class="logo" viewBox="0 0 74 20" xmlns="http://www.w3.org/2000/svg">
-    <style>.st0{fill:#0451DD;}</style>
-    <path class="st0" d="M28.1,2.8c0,0-0.7,0.3-1.8,1.6l-5.8,7.2V16c0,1.1,0.4,1.6,0.4,1.6h-7.2c0,0,0.4-0.6,0.4-1.6v-4.3L8.4,4.6c-1-1.3-1.8-1.7-1.8-1.7h7.2c0,0,0.2,0.7,1,1.9l2.4,3.7h0.1l2.4-3.7c0.8-1.1,1-1.9,1-1.9H28.1z"/>
-    <path class="st0" d="M42.5,2.8h-12c0,0,0.5,0.6,0.5,1.6V16c0,1.1-0.5,1.6-0.5,1.6h7.2c0,0-0.4-0.6-0.4-1.6v-3.6h5.2c3.3,0,5.8-1.7,5.8-4.8S45.9,2.8,42.5,2.8z M39.3,9.8h-2V5.6h2c1.5,0,2.6,0.6,2.6,2S40.8,9.8,39.3,9.8z"/>
-    <path class="st0" d="M66.8,6.3c0,0-0.7-0.4-1.8-0.4h-7.2v3.6h5.8c1.1,0,2-0.2,2-0.2v3.6c0,0-0.8-0.3-2-0.3h-5.7v3.6c0,1.1,0.4,1.6,0.4,1.6h-7.2c0,0,0.4-0.5,0.4-1.6V4.4c0-1.1-0.5-1.6-0.5-1.6h15.7V6.3L66.8,6.3z"/>
-  </svg>
-  <h1>Manual de uso</h1>
-  <h1 style="font-size:36px; margin-top:-12px;">CGS Bot · WhatsApp</h1>
-  <p class="subtitle">Consulta de catálogo · Registro de ventas · Reportes</p>
-  <div class="meta">
-    CGS Paraguay — Representante oficial YPF<br>
-    Mayo 2026 · v1.0
+  <div class="cover-band">
+    <svg class="logo" viewBox="0 0 74 20" xmlns="http://www.w3.org/2000/svg">
+      <style>.st0{fill:#0451DD;}</style>
+      <path class="st0" d="M28.1,2.8c0,0-0.7,0.3-1.8,1.6l-5.8,7.2V16c0,1.1,0.4,1.6,0.4,1.6h-7.2c0,0,0.4-0.6,0.4-1.6v-4.3L8.4,4.6c-1-1.3-1.8-1.7-1.8-1.7h7.2c0,0,0.2,0.7,1,1.9l2.4,3.7h0.1l2.4-3.7c0.8-1.1,1-1.9,1-1.9H28.1z"/>
+      <path class="st0" d="M42.5,2.8h-12c0,0,0.5,0.6,0.5,1.6V16c0,1.1-0.5,1.6-0.5,1.6h7.2c0,0-0.4-0.6-0.4-1.6v-3.6h5.2c3.3,0,5.8-1.7,5.8-4.8S45.9,2.8,42.5,2.8z M39.3,9.8h-2V5.6h2c1.5,0,2.6,0.6,2.6,2S40.8,9.8,39.3,9.8z"/>
+      <path class="st0" d="M66.8,6.3c0,0-0.7-0.4-1.8-0.4h-7.2v3.6h5.8c1.1,0,2-0.2,2-0.2v3.6c0,0-0.8-0.3-2-0.3h-5.7v3.6c0,1.1,0.4,1.6,0.4,1.6h-7.2c0,0,0.4-0.5,0.4-1.6V4.4c0-1.1-0.5-1.6-0.5-1.6h15.7V6.3L66.8,6.3z"/>
+    </svg>
+    <div class="tag">CGS Paraguay · Representante oficial</div>
+  </div>
+  <div class="cover-content">
+    <h1 class="cover-title">Manual de uso<br>del <em>CGS Bot</em></h1>
+    <p class="cover-subtitle">
+      Consulta de catálogo, registro de ventas y reportes
+      directamente desde WhatsApp.
+    </p>
+    <div class="cover-meta">
+      <div class="cover-meta-item">
+        <div class="label">Versión</div>
+        <div class="value">1.0</div>
+      </div>
+      <div class="cover-meta-item">
+        <div class="label">Fecha</div>
+        <div class="value">Mayo 2026</div>
+      </div>
+      <div class="cover-meta-item">
+        <div class="label">Audiencia</div>
+        <div class="value">Equipo de ventas</div>
+      </div>
+    </div>
   </div>
 </section>
 
-<!-- ══════════════════════════════════════════════════ -->
-<!-- ÍNDICE                                             -->
-<!-- ══════════════════════════════════════════════════ -->
-<div class="toc">
-  <h3>Contenido</h3>
-  <ol>
-    <li>Antes de empezar</li>
-    <li>La regla básica: el prefijo <code>/</code></li>
-    <li>Buscar y consultar productos</li>
-    <li>Registrar ventas</li>
-    <li>Ver reportes</li>
-    <li>Administración <span class="role-badge jefe">Jefe</span></li>
-    <li>Problemas comunes</li>
-    <li>Lista completa de comandos</li>
+<div class="page">
+
+<!-- ════════════════════════════════════════════════════════════════════
+     ÍNDICE
+     ════════════════════════════════════════════════════════════════════ -->
+<section class="toc">
+  <h2>Contenido</h2>
+  <ol class="toc-list">
+    <li><span>Antes de empezar</span><span class="toc-meta">Todos</span></li>
+    <li><span>La regla básica: el prefijo <code>/</code></span><span class="toc-meta">Todos</span></li>
+    <li><span>Buscar y consultar productos</span><span class="toc-meta">Vendedor</span></li>
+    <li><span>Registrar ventas</span><span class="toc-meta">Vendedor</span></li>
+    <li><span>Ver reportes</span><span class="toc-meta">Todos</span></li>
+    <li><span>Administración</span><span class="toc-meta">Jefe</span></li>
+    <li><span>Problemas comunes</span><span class="toc-meta">Todos</span></li>
+    <li><span>Lista completa de comandos</span><span class="toc-meta">Referencia</span></li>
   </ol>
-</div>
+</section>
 
-<!-- ══════════════════════════════════════════════════ -->
-<!-- 1. ANTES DE EMPEZAR                                -->
-<!-- ══════════════════════════════════════════════════ -->
-<h2>1. Antes de empezar</h2>
+<!-- ════════════════════════════════════════════════════════════════════
+     1. ANTES DE EMPEZAR
+     ════════════════════════════════════════════════════════════════════ -->
+<section class="section">
+  <div class="section-header">
+    <div class="section-num">1</div>
+    <h2>Antes de empezar</h2>
+  </div>
 
-<h3>¿Qué es el CGS Bot?</h3>
-<p>
-Es un asistente de WhatsApp que te permite, desde el celular y en cualquier
-momento, <strong>consultar el catálogo completo de productos YPF</strong>,
-<strong>registrar ventas</strong> y <strong>ver reportes</strong> de tu actividad
-y la del equipo. Funciona como un chat normal de WhatsApp — no hay que
-instalar nada extra.
-</p>
+  <p class="lead">
+    El CGS Bot es un asistente de WhatsApp para el equipo de ventas. Te permite
+    consultar el catálogo completo de productos YPF, registrar ventas y ver
+    reportes — sin instalar nada, desde tu celular.
+  </p>
 
-<h3>Cómo agregarlo a tus contactos</h3>
-<ol>
-  <li>El administrador te va a dar el <strong>número del bot</strong>.</li>
-  <li>Guardalo en tu celular con un nombre que recuerdes (por ejemplo: <em>CGS Bot</em>).</li>
-  <li>Abrí WhatsApp y mandale cualquier mensaje (por ejemplo <code>/ayuda</code>).</li>
-</ol>
+  <h3>Cómo agregarlo a tus contactos</h3>
+  <ol>
+    <li>El administrador te da el <strong>número del bot</strong>.</li>
+    <li>Guardalo en tu celular con un nombre que recuerdes (por ejemplo: <em>CGS Bot</em>).</li>
+    <li>Abrí WhatsApp y mandale <code>/ayuda</code>.</li>
+  </ol>
 
-<div class="callout info">
-<strong>Importante:</strong> el bot solo responde a los números autorizados por el
-administrador. Si te aparece el mensaje <em>"Este bot es de uso interno de CGS
-Paraguay"</em>, pedile al admin que te dé acceso.
-</div>
+  <div class="callout info">
+    <div>
+      <strong>Importante:</strong> el bot solo responde a los números autorizados.
+      Si te aparece el mensaje <em>"Este bot es de uso interno de CGS Paraguay"</em>,
+      pedile al admin que te dé acceso.
+    </div>
+  </div>
+</section>
 
-<!-- ══════════════════════════════════════════════════ -->
-<!-- 2. LA REGLA BÁSICA                                 -->
-<!-- ══════════════════════════════════════════════════ -->
-<h2>2. La regla básica: el prefijo <code>/</code></h2>
+<!-- ════════════════════════════════════════════════════════════════════
+     2. PREFIJO
+     ════════════════════════════════════════════════════════════════════ -->
+<section class="section">
+  <div class="section-header">
+    <div class="section-num">2</div>
+    <h2>La regla básica: el prefijo <code>/</code></h2>
+  </div>
 
-<p>
-Para que el bot te responda, los comandos deben empezar con una <strong>barra
-diagonal</strong> (<code>/</code>). Esto evita que el bot se confunda con
-conversaciones normales.
-</p>
+  <p class="lead">
+    Para que el bot te responda, los comandos deben empezar con una
+    <strong>barra diagonal</strong> (<code>/</code>). Esto evita que el bot se
+    confunda con conversaciones normales.
+  </p>
 
-<div class="command">
-<span class="you">Tú:</span> /catalogo<br>
-<span class="bot">Bot:</span> 📋 Catálogo CGS Paraguay<br>
-&nbsp;&nbsp;&nbsp;&nbsp;...lista de productos...
-</div>
+  <div class="command">
+    <span class="you">Tú:</span> /catalogo<br>
+    <span class="bot">Bot:</span> 📋 Catálogo CGS Paraguay<br>
+    <span class="dim">&nbsp;&nbsp;&nbsp;&nbsp;...lista de productos...</span>
+  </div>
 
-<div class="command">
-<span class="you">Tú:</span> hola que tal<br>
-<span class="bot">Bot:</span> <span class="note">(no responde — falta el /)</span>
-</div>
+  <div class="command">
+    <span class="you">Tú:</span> hola que tal<br>
+    <span class="bot">Bot:</span> <span class="note">(no responde — falta el /)</span>
+  </div>
 
-<div class="callout success">
-<strong>Excepción:</strong> cuando el bot está esperando una respuesta tuya
-(por ejemplo, te pidió la cantidad), no necesitás poner el <code>/</code>.
-Respondés directamente.
-</div>
+  <div class="callout success">
+    <div>
+      <strong>Excepción:</strong> cuando el bot está esperando una respuesta tuya
+      (te pidió la cantidad, por ejemplo), respondés directamente sin <code>/</code>.
+    </div>
+  </div>
+</section>
 
-<!-- ══════════════════════════════════════════════════ -->
-<!-- 3. BUSCAR Y CONSULTAR                              -->
-<!-- ══════════════════════════════════════════════════ -->
-<h2>3. Buscar y consultar productos <span class="role-badge vendedor">Vendedor</span></h2>
+<!-- ════════════════════════════════════════════════════════════════════
+     3. BUSCAR
+     ════════════════════════════════════════════════════════════════════ -->
+<section class="section">
+  <div class="section-header">
+    <div class="section-num">3</div>
+    <h2>Buscar y consultar productos <span class="role-badge vendedor">Vendedor</span></h2>
+  </div>
 
-<h3>Ver todo el catálogo</h3>
-<div class="command">
-<span class="you">Tú:</span> /catalogo<br>
-<span class="bot">Bot:</span> 📋 Catálogo CGS Paraguay<br>
-&nbsp;&nbsp;ELAION — Autos<br>
-&nbsp;&nbsp;&nbsp;&nbsp;[20] ELAION F10 5W-30<br>
-&nbsp;&nbsp;&nbsp;&nbsp;[21] ELAION F10 10W-40<br>
-&nbsp;&nbsp;&nbsp;&nbsp;...
-</div>
-<p>Devuelve la lista completa de productos agrupados por categoría con sus IDs entre corchetes.</p>
+  <h3>Ver todo el catálogo</h3>
+  <div class="command">
+    <span class="you">Tú:</span> /catalogo<br>
+    <span class="bot">Bot:</span> 📋 Catálogo CGS Paraguay<br>
+    <br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<strong>ELAION — Autos</strong><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[20] ELAION F10 5W-30<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[21] ELAION F10 10W-40<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">&nbsp;&nbsp;&nbsp;&nbsp;...</span>
+  </div>
+  <p>Lista completa agrupada por categoría con sus IDs entre corchetes.</p>
 
-<h3>Ver la ficha de un producto</h3>
-<p>Si ya conocés el ID, escribilo directo con la barra:</p>
-<div class="command">
-<span class="you">Tú:</span> /20<br>
-<span class="bot">Bot:</span> 🔧 [20] ELAION F10 5W-30<br>
-&nbsp;&nbsp;Tecnología:     Semi-Sintético<br>
-&nbsp;&nbsp;Viscosidad:     5W-30<br>
-&nbsp;&nbsp;Specs:          API SN/CF<br>
-&nbsp;&nbsp;Presentaciones: 1L · 4L · 20L<br>
-&nbsp;&nbsp;Aplicaciones:   Motores nafta modernos<br>
-&nbsp;&nbsp;🏷️ Más vendido
-</div>
+  <h3>Ver la ficha de un producto</h3>
+  <p>Si ya conocés el ID, escribilo directo con la barra:</p>
+  <div class="command">
+    <span class="you">Tú:</span> /20<br>
+    <span class="bot">Bot:</span> 🔧 [20] ELAION F10 5W-30<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;Tecnología:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Semi-Sintético<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;Viscosidad:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;5W-30<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;Specs:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;API SN/CF<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;Presentaciones: 1L · 4L · 20L<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;Aplicaciones:&nbsp;&nbsp;&nbsp;Motores nafta modernos<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;🏷️ Más vendido
+  </div>
 
-<h3>Buscar por nombre o tipo</h3>
-<p>Si no recordás el ID, podés buscar por nombre, viscosidad o tipo. Tolera errores de tipeo:</p>
-<div class="command">
-<span class="you">Tú:</span> /buscar elaion 5w30<br>
-<span class="bot">Bot:</span> Encontré varios para "elaion 5w30":<br>
-&nbsp;&nbsp;1. [20] ELAION F10 5W-30 — Semi-Sintético<br>
-&nbsp;&nbsp;2. [23] ELAION F30 5W-30 — Sintético<br>
-&nbsp;&nbsp;👉 Escribí 1 o 2 para la ficha completa.
-</div>
+  <h3>Buscar por nombre o tipo</h3>
+  <p>Si no recordás el ID, podés buscar por nombre, viscosidad o tipo. <strong>Tolera errores de tipeo</strong>:</p>
+  <div class="command">
+    <span class="you">Tú:</span> /buscar elaion 5w30<br>
+    <span class="bot">Bot:</span> Encontré varios para "elaion 5w30":<br>
+    <br>
+    &nbsp;&nbsp;&nbsp;&nbsp;1. [20] ELAION F10 5W-30 — Semi-Sintético<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;2. [23] ELAION F30 5W-30 — Sintético<br>
+    <br>
+    &nbsp;&nbsp;&nbsp;&nbsp;👉 Escribí 1 o 2 para la ficha completa.
+  </div>
 
-<div class="callout info">
-<strong>Tolera typos:</strong> <code>/buscar elaiom 5w30</code> (con "m" en vez de "n")
-también funciona. El bot detecta el error y sugiere el producto correcto.
-</div>
+  <div class="callout info">
+    <div>
+      <strong>Tolera typos:</strong> <code>/buscar elaiom 5w30</code> (con "m" en
+      vez de "n") también funciona. El bot detecta el error y sugiere el producto
+      correcto.
+    </div>
+  </div>
 
-<h3>Buscar por categoría</h3>
-<p>Atajos para ver una categoría completa:</p>
-<table>
-<tr><th>Comando</th><th>Resultado</th></tr>
-<tr><td><code>/auto</code> o <code>/autos</code></td><td>Autos · ELAION</td></tr>
-<tr><td><code>/moto</code> o <code>/motos</code></td><td>Motos · RÖD</td></tr>
-<tr><td><code>/camion</code> o <code>/camiones</code></td><td>Camiones diesel · EXTRAVIDA</td></tr>
-<tr><td><code>/otros</code></td><td>Refrigerantes · DOT 4 · Grasas · Hidráulico</td></tr>
-</table>
+  <h3>Buscar por categoría</h3>
+  <p>Atajos para ver una categoría completa:</p>
+  <table>
+    <thead>
+      <tr><th>Comando</th><th>Categoría</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>/auto</code> · <code>/autos</code></td><td>Autos · ELAION</td></tr>
+      <tr><td><code>/moto</code> · <code>/motos</code></td><td>Motos · RÖD</td></tr>
+      <tr><td><code>/camion</code> · <code>/camiones</code></td><td>Camiones diesel · EXTRAVIDA</td></tr>
+      <tr><td><code>/otros</code></td><td>Refrigerantes · DOT 4 · Grasas · Hidráulico</td></tr>
+    </tbody>
+  </table>
 
-<h3>Recomendar producto para un vehículo</h3>
-<p>Cuando el cliente te dice qué auto/moto tiene y querés saber qué aceite usar:</p>
-<div class="command">
-<span class="you">Tú:</span> /guia toyota corolla 2018<br>
-<span class="bot">Bot:</span> 🚗 Toyota Corolla (2014–2019) · nafta<br>
-<br>
-&nbsp;&nbsp;✅ Recomendado: [20] ELAION F10 5W-30<br>
-&nbsp;&nbsp;↪ Alternativa:  [23] ELAION F30 5W-30<br>
-<br>
-&nbsp;&nbsp;📝 Motor 1.8L 2ZR-FE<br>
-<br>
-&nbsp;&nbsp;👉 /20 ficha · /vender 20 registrar
-</div>
+  <h3>Recomendar producto para un vehículo</h3>
+  <p>Cuando el cliente te dice qué auto tiene y querés saber qué aceite usar:</p>
+  <div class="command">
+    <span class="you">Tú:</span> /guia toyota corolla 2018<br>
+    <span class="bot">Bot:</span> 🚗 Toyota Corolla (2014–2019) · nafta<br>
+    <br>
+    &nbsp;&nbsp;&nbsp;&nbsp;✅ Recomendado: [20] ELAION F10 5W-30<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;↪&nbsp;Alternativa:&nbsp;&nbsp;[23] ELAION F30 5W-30<br>
+    <br>
+    &nbsp;&nbsp;&nbsp;&nbsp;📝 Motor 1.8L 2ZR-FE<br>
+    <br>
+    &nbsp;&nbsp;&nbsp;&nbsp;👉 /20 ficha · /vender 20 registrar
+  </div>
 
-<div class="callout success">
-<strong>Truco:</strong> <code>/buscar hilux</code> también funciona. Si lo que escribís
-no es un producto, el bot lo busca como vehículo automáticamente.
-</div>
+  <div class="callout success">
+    <div>
+      <strong>Truco:</strong> <code>/buscar hilux</code> también funciona. Si lo que
+      escribís no es un producto, el bot lo busca como vehículo automáticamente.
+    </div>
+  </div>
 
-<h3>Elegir de una lista</h3>
-<p>Cuando el bot te muestra una lista numerada (1, 2, 3...), respondés con el número
-para elegir. <strong>No necesitás escribir la barra</strong>:</p>
-<div class="command">
-<span class="you">Tú:</span> /buscar elaion<br>
-<span class="bot">Bot:</span> Encontré varios:<br>
-&nbsp;&nbsp;1. [20] ELAION F10 5W-30<br>
-&nbsp;&nbsp;2. [22] ELAION F30 5W-40<br>
-&nbsp;&nbsp;3. [25] ELAION SUV 5W-40<br>
-<br>
-<span class="you">Tú:</span> 2<br>
-<span class="bot">Bot:</span> 🔧 [22] ELAION F30 5W-40 ...
-</div>
+  <h3>Elegir de una lista</h3>
+  <p>Cuando el bot te muestra una lista numerada, respondés con el número para
+  elegir. <strong>No necesitás escribir la barra</strong>:</p>
+  <div class="command">
+    <span class="you">Tú:</span> /buscar elaion<br>
+    <span class="bot">Bot:</span> Encontré varios:<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;1. [20] ELAION F10 5W-30<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;2. [22] ELAION F30 5W-40<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;3. [25] ELAION SUV 5W-40<br>
+    <br>
+    <span class="you">Tú:</span> 2<br>
+    <span class="bot">Bot:</span> 🔧 [22] ELAION F30 5W-40 <span class="dim">...</span>
+  </div>
+</section>
 
-<!-- ══════════════════════════════════════════════════ -->
-<!-- 4. REGISTRAR VENTAS                                -->
-<!-- ══════════════════════════════════════════════════ -->
-<h2>4. Registrar ventas <span class="role-badge vendedor">Vendedor</span></h2>
+<!-- ════════════════════════════════════════════════════════════════════
+     4. VENTAS
+     ════════════════════════════════════════════════════════════════════ -->
+<section class="section">
+  <div class="section-header">
+    <div class="section-num">4</div>
+    <h2>Registrar ventas <span class="role-badge vendedor">Vendedor</span></h2>
+  </div>
 
-<h3>Forma fácil: el bot te guía</h3>
-<p>Si no querés acordarte de la sintaxis, escribí solo <code>/vender</code> y el bot
-te va preguntando paso a paso:</p>
-<div class="command">
-<span class="you">Tú:</span> /vender<br>
-<span class="bot">Bot:</span> ¿Qué producto vendiste? Escribí el nombre o ID.<br>
-<br>
-<span class="you">Tú:</span> elaion 5w30<br>
-<span class="bot">Bot:</span> Encontré varios para "elaion 5w30":<br>
-&nbsp;&nbsp;1. [20] ELAION F10 5W-30<br>
-&nbsp;&nbsp;2. [23] ELAION F30 5W-30<br>
-&nbsp;&nbsp;👉 ¿Cuál es? Escribí 1 o 2.<br>
-<br>
-<span class="you">Tú:</span> 1<br>
-<span class="bot">Bot:</span> ¿Cuántas unidades?<br>
-<br>
-<span class="you">Tú:</span> 3<br>
-<span class="bot">Bot:</span> ✅ Venta registrada<br>
-&nbsp;&nbsp;[20] ELAION F10 5W-30 × 3 unidades<br>
-&nbsp;&nbsp;🕐 14:32
-</div>
+  <h3>Forma fácil: el bot te guía</h3>
+  <p>Si no querés acordarte de la sintaxis, escribí solo <code>/vender</code> y el
+  bot te va preguntando paso a paso:</p>
+  <div class="command">
+    <span class="you">Tú:</span> /vender<br>
+    <span class="bot">Bot:</span> ¿Qué producto vendiste? Escribí el nombre o ID.<br>
+    <br>
+    <span class="you">Tú:</span> elaion 5w30<br>
+    <span class="bot">Bot:</span> Encontré varios para "elaion 5w30":<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;1. [20] ELAION F10 5W-30<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;2. [23] ELAION F30 5W-30<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;👉 ¿Cuál es? Escribí 1 o 2.<br>
+    <br>
+    <span class="you">Tú:</span> 1<br>
+    <span class="bot">Bot:</span> ¿Cuántas unidades?<br>
+    <br>
+    <span class="you">Tú:</span> 3<br>
+    <span class="bot">Bot:</span> ✅ Venta registrada<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;[20] ELAION F10 5W-30 × 3 unidades<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;🕐 14:32
+  </div>
 
-<h3>Atajos rápidos (si ya sabés el ID)</h3>
-<table>
-<tr><th>Comando</th><th>Qué hace</th></tr>
-<tr><td><code>/vender 20</code></td><td>Registra <strong>1 unidad</strong> del producto [20]</td></tr>
-<tr><td><code>/vender 20 3</code></td><td>Registra <strong>3 unidades</strong> del producto [20]</td></tr>
-<tr><td><code>/vender 20 3, 26 1</code></td><td>Multi-venta: 3 del [20] y 1 del [26], en un solo mensaje</td></tr>
-</table>
+  <h3>Atajos rápidos (si ya sabés el ID)</h3>
+  <table>
+    <thead>
+      <tr><th>Comando</th><th>Qué hace</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>/vender 20</code></td><td>Registra <strong>1 unidad</strong> del producto [20]</td></tr>
+      <tr><td><code>/vender 20 3</code></td><td>Registra <strong>3 unidades</strong> del producto [20]</td></tr>
+      <tr><td><code>/vender 20 3, 26 1</code></td><td>Multi-venta: 3 del [20] y 1 del [26], en un solo mensaje</td></tr>
+    </tbody>
+  </table>
 
-<h3>Cancelar lo que estás haciendo</h3>
-<p>Si te equivocaste en el medio de un flujo, escribí <code>/salir</code> y el bot
-cancela todo. Después podés empezar de nuevo.</p>
-<div class="command">
-<span class="you">Tú:</span> /salir<br>
-<span class="bot">Bot:</span> Listo, cancelé lo que tenías abierto. 👋
-</div>
+  <h3>Cancelar lo que estás haciendo</h3>
+  <p>Si te equivocaste en el medio de un flujo, escribí <code>/salir</code> y el
+  bot cancela todo. Después podés empezar de nuevo.</p>
+  <div class="command">
+    <span class="you">Tú:</span> /salir<br>
+    <span class="bot">Bot:</span> Listo, cancelé lo que tenías abierto. 👋
+  </div>
 
-<div class="callout">
-<strong>Cuidado:</strong> el bot no permite editar una venta ya registrada. Si registraste
-mal una venta, contactá al jefe para que la corrija desde el panel admin.
-</div>
+  <div class="callout">
+    <div>
+      <strong>Cuidado:</strong> el bot no permite editar una venta ya registrada.
+      Si registraste mal una venta, contactá al jefe para que la corrija desde el
+      panel admin.
+    </div>
+  </div>
+</section>
 
-<!-- ══════════════════════════════════════════════════ -->
-<!-- 5. REPORTES                                        -->
-<!-- ══════════════════════════════════════════════════ -->
-<h2>5. Ver reportes</h2>
+<!-- ════════════════════════════════════════════════════════════════════
+     5. REPORTES
+     ════════════════════════════════════════════════════════════════════ -->
+<section class="section">
+  <div class="section-header">
+    <div class="section-num">5</div>
+    <h2>Ver reportes</h2>
+  </div>
 
-<h3>Ventas del día</h3>
-<div class="command">
-<span class="you">Tú:</span> /ventas<br>
-<span class="bot">Bot:</span> 📊 Ventas de hoy<br>
-<br>
-&nbsp;&nbsp;ELAION — Autos: 12 uds<br>
-&nbsp;&nbsp;EXTRAVIDA — Camiones: 5 uds<br>
-&nbsp;&nbsp;Total: 17 uds (6 operaciones)<br>
-<br>
-&nbsp;&nbsp;Detalle:<br>
-&nbsp;&nbsp;&nbsp;&nbsp;14:32 · ELAION F10 5W-30 ×3<br>
-&nbsp;&nbsp;&nbsp;&nbsp;13:15 · EXTRAVIDA 15W-40 ×2<br>
-&nbsp;&nbsp;&nbsp;&nbsp;...
-</div>
+  <h3>Ventas del día</h3>
+  <div class="command">
+    <span class="you">Tú:</span> /ventas<br>
+    <span class="bot">Bot:</span> 📊 Ventas de hoy<br>
+    <br>
+    &nbsp;&nbsp;&nbsp;&nbsp;ELAION — Autos: 12 uds<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;EXTRAVIDA — Camiones: 5 uds<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<strong>Total: 17 uds (6 operaciones)</strong><br>
+    <br>
+    &nbsp;&nbsp;&nbsp;&nbsp;Detalle:<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;14:32 · ELAION F10 5W-30 ×3<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;13:15 · EXTRAVIDA 15W-40 ×2<br>
+    <span class="dim">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;...</span>
+  </div>
 
-<h3>Ventas de la semana</h3>
-<div class="command">
-<span class="you">Tú:</span> /ventas semana
-</div>
-<p>Igual al anterior pero abarca los últimos 7 días.</p>
+  <h3>Ventas de la semana</h3>
+  <div class="command">
+    <span class="you">Tú:</span> /ventas semana
+  </div>
+  <p>Igual al anterior pero abarca los últimos 7 días.</p>
 
-<h3>Top 5 de productos más vendidos <span class="role-badge jefe">Jefe</span></h3>
-<div class="command">
-<span class="you">Tú:</span> /ranking<br>
-<span class="bot">Bot:</span> 🏆 Top productos — últimos 7 días<br>
-<br>
-&nbsp;&nbsp;1. ELAION F10 5W-30 — 28 uds<br>
-&nbsp;&nbsp;2. EXTRAVIDA 15W-40 — 17 uds<br>
-&nbsp;&nbsp;3. RÖD 20W-50 — 12 uds<br>
-&nbsp;&nbsp;...
-</div>
+  <h3>Top 5 de productos más vendidos <span class="role-badge jefe">Jefe</span></h3>
+  <div class="command">
+    <span class="you">Tú:</span> /ranking<br>
+    <span class="bot">Bot:</span> 🏆 Top productos — últimos 7 días<br>
+    <br>
+    &nbsp;&nbsp;&nbsp;&nbsp;1. ELAION F10 5W-30 — 28 uds<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;2. EXTRAVIDA 15W-40 — 17 uds<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;3. RÖD 20W-50 — 12 uds<br>
+    <span class="dim">&nbsp;&nbsp;&nbsp;&nbsp;...</span>
+  </div>
+</section>
 
-<!-- ══════════════════════════════════════════════════ -->
-<!-- 6. ADMINISTRACIÓN                                  -->
-<!-- ══════════════════════════════════════════════════ -->
-<h2>6. Administración <span class="role-badge jefe">Jefe</span></h2>
+<!-- ════════════════════════════════════════════════════════════════════
+     6. ADMINISTRACIÓN
+     ════════════════════════════════════════════════════════════════════ -->
+<section class="section">
+  <div class="section-header">
+    <div class="section-num">6</div>
+    <h2>Administración <span class="role-badge jefe">Jefe</span></h2>
+  </div>
 
-<p>Esta sección es para el administrador del sistema. Las tareas se hacen desde
-el panel de Supabase (la base de datos en la nube).</p>
+  <p class="lead">
+    Esta sección es para el administrador del sistema. Las tareas se hacen desde
+    el panel de Supabase (la base de datos en la nube).
+  </p>
 
-<h3>Dar de alta a un vendedor</h3>
-<p>Para que un nuevo vendedor pueda usar el bot:</p>
-<ol>
-  <li>Entrá al panel de Supabase del proyecto CGS.</li>
-  <li>Andá a <strong>Table Editor</strong> → tabla <code>vendedores</code>.</li>
-  <li>Insertá una fila nueva con:
-    <ul>
-      <li><code>telefono</code>: número completo sin <code>+</code> ni espacios (ej: <code>595981234567</code>)</li>
-      <li><code>nombre</code>: nombre del vendedor</li>
-      <li><code>categorias</code>: array con las categorías que vende. Ej: <code>{elaion,extravida,moto,otros}</code></li>
-      <li><code>activo</code>: <code>true</code></li>
-    </ul>
-  </li>
-  <li>El bot lo reconoce <strong>en menos de 5 minutos</strong> (cache).</li>
-</ol>
+  <h3>Dar de alta a un vendedor</h3>
+  <ol>
+    <li>Entrá al panel de Supabase del proyecto CGS.</li>
+    <li>Andá a <strong>Table Editor</strong> → tabla <code>vendedores</code>.</li>
+    <li>Insertá una fila nueva con los siguientes campos:</li>
+  </ol>
+  <table>
+    <thead>
+      <tr><th>Campo</th><th>Valor</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>telefono</code></td><td>Número completo sin <code>+</code> ni espacios. Ej: <code>595981234567</code></td></tr>
+      <tr><td><code>nombre</code></td><td>Nombre del vendedor</td></tr>
+      <tr><td><code>categorias</code></td><td>Array con las categorías que vende. Ej: <code>{elaion,extravida,moto,otros}</code></td></tr>
+      <tr><td><code>activo</code></td><td><code>true</code></td></tr>
+    </tbody>
+  </table>
+  <p>El bot lo reconoce en <strong>menos de 5 minutos</strong> (cache automático).</p>
 
-<h3>Dar de baja a un vendedor</h3>
-<p>Misma tabla, cambiá el campo <code>activo</code> a <code>false</code>. No hace
-falta borrar la fila — así se mantiene el historial de ventas.</p>
+  <h3>Dar de baja a un vendedor</h3>
+  <p>Misma tabla, cambiá <code>activo</code> a <code>false</code>. No hace falta
+  borrar la fila — así se mantiene el historial de ventas.</p>
 
-<h3>Cargar productos al catálogo</h3>
-<p>Tabla <code>products</code> en Supabase. Campos importantes:</p>
-<ul>
-  <li><code>name</code>, <code>category</code> (elaion / extravida / moto / otros), <code>viscosity</code>, <code>technology</code>, <code>specs</code></li>
-  <li><code>presentations</code>, <code>applications</code>: arrays de texto</li>
-  <li><code>featured</code>: marcar como destacado (<code>true</code>/<code>false</code>)</li>
-  <li><code>badge</code>: etiqueta opcional ("Más vendido", "Promoción", etc.)</li>
-</ul>
-<p>El campo <code>search_terms</code> se calcula automáticamente — no lo edites a mano.</p>
+  <h3>Cargar productos al catálogo</h3>
+  <p>Tabla <code>products</code> en Supabase. Campos importantes:</p>
+  <ul>
+    <li><code>name</code>, <code>category</code> (elaion / extravida / moto / otros), <code>viscosity</code>, <code>technology</code>, <code>specs</code></li>
+    <li><code>presentations</code>, <code>applications</code>: arrays de texto</li>
+    <li><code>featured</code>: marcar como destacado (<code>true</code>/<code>false</code>)</li>
+    <li><code>badge</code>: etiqueta opcional ("Más vendido", "Promoción", etc.)</li>
+  </ul>
+  <div class="callout info">
+    <div>
+      El campo <code>search_terms</code> se calcula automáticamente — no lo edites
+      a mano.
+    </div>
+  </div>
 
-<h3>Cargar vehículos a la guía</h3>
-<p>Tabla <code>vehicle_guide</code>. Campos:</p>
-<ul>
-  <li><code>brand</code>, <code>model</code>, <code>year_from</code>, <code>year_to</code></li>
-  <li><code>engine_type</code>: <code>nafta</code> / <code>diesel</code> / <code>turbo</code> / <code>4t</code> / <code>2t</code> / <code>hibrido</code></li>
-  <li><code>recommended_product_id</code>: ID del producto sugerido</li>
-  <li><code>alternative_product_id</code>: ID alternativo (opcional, para clientes que buscan algo más económico)</li>
-  <li><code>notes</code>: comentario libre (ej: "Motor 1.8L 2ZR-FE")</li>
-</ul>
+  <h3>Cargar vehículos a la guía</h3>
+  <p>Tabla <code>vehicle_guide</code>. Campos:</p>
+  <ul>
+    <li><code>brand</code>, <code>model</code>, <code>year_from</code>, <code>year_to</code></li>
+    <li><code>engine_type</code>: <code>nafta</code> / <code>diesel</code> / <code>turbo</code> / <code>4t</code> / <code>2t</code> / <code>hibrido</code></li>
+    <li><code>recommended_product_id</code>: ID del producto sugerido</li>
+    <li><code>alternative_product_id</code>: ID alternativo (opcional)</li>
+    <li><code>notes</code>: comentario libre (ej: "Motor 1.8L 2ZR-FE")</li>
+  </ul>
 
-<h3>Corregir o anular una venta</h3>
-<p>Tabla <code>sales</code> en Supabase. Buscá el registro por <code>id</code> o
-<code>created_at</code> y editalo o borralo según corresponda.</p>
+  <h3>Corregir o anular una venta</h3>
+  <p>Tabla <code>sales</code> en Supabase. Buscá el registro por <code>id</code>
+  o <code>created_at</code> y editalo o borralo según corresponda.</p>
+</section>
 
-<!-- ══════════════════════════════════════════════════ -->
-<!-- 7. PROBLEMAS COMUNES                               -->
-<!-- ══════════════════════════════════════════════════ -->
-<h2>7. Problemas comunes</h2>
+<!-- ════════════════════════════════════════════════════════════════════
+     7. PROBLEMAS
+     ════════════════════════════════════════════════════════════════════ -->
+<section class="section">
+  <div class="section-header">
+    <div class="section-num">7</div>
+    <h2>Problemas comunes</h2>
+  </div>
 
-<h3>El bot no responde</h3>
-<ul>
-  <li><strong>¿Pusiste el <code>/</code> al inicio?</strong> Sin barra, el bot no procesa el mensaje.</li>
-  <li><strong>¿Estás en la lista de autorizados?</strong> Si el bot te respondió alguna vez con <em>"Este bot es de uso interno..."</em>, pedile acceso al admin.</li>
-  <li><strong>¿Estará el bot caído?</strong> Si el equipo entero deja de recibir respuestas, avisá al administrador.</li>
-</ul>
+  <h3>El bot no responde</h3>
+  <ul>
+    <li><strong>¿Pusiste el <code>/</code> al inicio?</strong> Sin barra, el bot no procesa el mensaje.</li>
+    <li><strong>¿Estás en la lista de autorizados?</strong> Si el bot te respondió alguna vez con <em>"Este bot es de uso interno..."</em>, pedile acceso al admin.</li>
+    <li><strong>¿Estará el bot caído?</strong> Si el equipo entero deja de recibir respuestas, avisá al administrador.</li>
+  </ul>
 
-<h3>Me dice "Este bot es de uso interno de CGS Paraguay"</h3>
-<p>Tu número no está cargado en la tabla de vendedores autorizados. Contactá al
-admin con tu número en formato internacional (sin <code>+</code>) y pedí que
-te dé de alta.</p>
+  <h3>Me dice "Este bot es de uso interno de CGS Paraguay"</h3>
+  <p>Tu número no está cargado en la tabla de vendedores autorizados. Contactá al
+  admin con tu número en formato internacional (sin <code>+</code>) y pedí que
+  te dé de alta.</p>
 
-<h3>Quedé "trabado" en medio de un flujo</h3>
-<p>Escribí <code>/salir</code>. Cancela cualquier flujo activo y volvés al inicio.</p>
+  <h3>Quedé "trabado" en medio de un flujo</h3>
+  <p>Escribí <code>/salir</code>. Cancela cualquier flujo activo y volvés al inicio.</p>
 
-<h3>No encuentro el producto que busco</h3>
-<ol>
-  <li>Probá <code>/catalogo</code> para ver todo lo que hay.</li>
-  <li>Si lo que tenés es el nombre del vehículo del cliente, usá <code>/guia</code> en lugar de <code>/buscar</code>.</li>
-  <li>Si igual no aparece, probablemente no está en el catálogo. Avisá al admin.</li>
-</ol>
+  <h3>No encuentro el producto que busco</h3>
+  <ol>
+    <li>Probá <code>/catalogo</code> para ver todo lo que hay.</li>
+    <li>Si lo que tenés es el nombre del vehículo del cliente, usá <code>/guia</code> en lugar de <code>/buscar</code>.</li>
+    <li>Si igual no aparece, probablemente no está en el catálogo. Avisá al admin.</li>
+  </ol>
 
-<h3>Mis ventas no aparecen en el reporte del día</h3>
-<p>El reporte muestra ventas desde las 00:00 (hora Paraguay). Si registraste
-una venta y la zona horaria está mal configurada, el admin lo puede ajustar.</p>
+  <h3>Mis ventas no aparecen en el reporte del día</h3>
+  <p>El reporte muestra ventas desde las 00:00 (hora Paraguay). Si registraste una
+  venta y la zona horaria está mal configurada, el admin lo puede ajustar.</p>
+</section>
 
-<!-- ══════════════════════════════════════════════════ -->
-<!-- 8. LISTA DE COMANDOS                               -->
-<!-- ══════════════════════════════════════════════════ -->
-<h2>8. Lista completa de comandos</h2>
+<!-- ════════════════════════════════════════════════════════════════════
+     8. LISTA DE COMANDOS
+     ════════════════════════════════════════════════════════════════════ -->
+<section class="section">
+  <div class="section-header">
+    <div class="section-num">8</div>
+    <h2>Lista completa de comandos</h2>
+  </div>
 
-<table>
-<tr><th>Comando</th><th>Qué hace</th><th>Quién</th></tr>
-<tr><td><code>/ayuda</code></td><td>Muestra el menú de comandos</td><td>Todos</td></tr>
-<tr><td><code>/catalogo</code></td><td>Lista todos los productos por categoría</td><td>Todos</td></tr>
-<tr><td><code>/buscar [texto]</code></td><td>Búsqueda inteligente (productos + vehículos)</td><td>Todos</td></tr>
-<tr><td><code>/guia [vehículo]</code></td><td>Recomendación de aceite por vehículo</td><td>Todos</td></tr>
-<tr><td><code>/[ID]</code></td><td>Ficha del producto con ese ID</td><td>Todos</td></tr>
-<tr><td><code>/auto</code> · <code>/moto</code> · <code>/camion</code> · <code>/otros</code></td><td>Productos por categoría</td><td>Todos</td></tr>
-<tr><td><code>/destacados</code></td><td>Productos marcados como destacados</td><td>Todos</td></tr>
-<tr><td><code>/vender</code></td><td>Registrar venta (flujo guiado)</td><td>Vendedor</td></tr>
-<tr><td><code>/vender [ID]</code></td><td>Registrar 1 unidad del producto [ID]</td><td>Vendedor</td></tr>
-<tr><td><code>/vender [ID] [N]</code></td><td>Registrar N unidades del producto [ID]</td><td>Vendedor</td></tr>
-<tr><td><code>/vender [ID] [N], [ID] [N]</code></td><td>Multi-venta en un solo mensaje</td><td>Vendedor</td></tr>
-<tr><td><code>/ventas</code></td><td>Resumen de ventas de hoy</td><td>Todos</td></tr>
-<tr><td><code>/ventas semana</code></td><td>Resumen de los últimos 7 días</td><td>Todos</td></tr>
-<tr><td><code>/ranking</code> o <code>/top</code></td><td>Top 5 productos de la semana</td><td>Todos</td></tr>
-<tr><td><code>/salir</code></td><td>Cancela el flujo activo</td><td>Todos</td></tr>
-</table>
+  <table>
+    <thead>
+      <tr><th>Comando</th><th>Qué hace</th><th>Quién</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>/ayuda</code></td><td>Muestra el menú de comandos</td><td>Todos</td></tr>
+      <tr><td><code>/catalogo</code></td><td>Lista todos los productos por categoría</td><td>Todos</td></tr>
+      <tr><td><code>/buscar</code> <em>texto</em></td><td>Búsqueda inteligente (productos + vehículos)</td><td>Todos</td></tr>
+      <tr><td><code>/guia</code> <em>vehículo</em></td><td>Recomendación de aceite por vehículo</td><td>Todos</td></tr>
+      <tr><td><code>/</code><em>ID</em></td><td>Ficha del producto con ese ID</td><td>Todos</td></tr>
+      <tr><td><code>/auto</code> · <code>/moto</code> · <code>/camion</code> · <code>/otros</code></td><td>Productos por categoría</td><td>Todos</td></tr>
+      <tr><td><code>/destacados</code></td><td>Productos marcados como destacados</td><td>Todos</td></tr>
+      <tr><td><code>/vender</code></td><td>Registrar venta (flujo guiado)</td><td>Vendedor</td></tr>
+      <tr><td><code>/vender</code> <em>ID</em></td><td>Registrar 1 unidad del producto [ID]</td><td>Vendedor</td></tr>
+      <tr><td><code>/vender</code> <em>ID N</em></td><td>Registrar N unidades del producto [ID]</td><td>Vendedor</td></tr>
+      <tr><td><code>/vender</code> <em>ID N, ID N</em></td><td>Multi-venta en un solo mensaje</td><td>Vendedor</td></tr>
+      <tr><td><code>/ventas</code></td><td>Resumen de ventas de hoy</td><td>Todos</td></tr>
+      <tr><td><code>/ventas semana</code></td><td>Resumen de los últimos 7 días</td><td>Todos</td></tr>
+      <tr><td><code>/ranking</code> · <code>/top</code></td><td>Top 5 productos de la semana</td><td>Todos</td></tr>
+      <tr><td><code>/salir</code></td><td>Cancela el flujo activo</td><td>Todos</td></tr>
+    </tbody>
+  </table>
 
-<div class="callout info">
-<strong>Tip final:</strong> escribí <code>/ayuda</code> en WhatsApp cuando no
-recuerdes un comando. El bot siempre te muestra el menú actualizado.
-</div>
+  <div class="callout info">
+    <div>
+      <strong>Tip final:</strong> escribí <code>/ayuda</code> en WhatsApp cuando no
+      recuerdes un comando. El bot siempre te muestra el menú actualizado.
+    </div>
+  </div>
+</section>
 
-<div class="footer">
-  CGS Paraguay · Representante oficial YPF · Manual del CGS Bot v1.0 · 2026
+<div class="footer-page">
+  CGS Paraguay · Representante oficial YPF<br>
+  Manual del CGS Bot · v1.0 · Mayo 2026
 </div>
 
 </div>
