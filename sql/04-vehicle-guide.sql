@@ -76,7 +76,8 @@ LANGUAGE sql STABLE AS $$
          g.alternative_product_id, pa.name AS alternative_name,
          g.notes,
          similarity(g.search_terms, n.nq) AS score
-  FROM vehicle_guide g, normalized n
+  FROM vehicle_guide g
+  CROSS JOIN normalized n
   LEFT JOIN products pr ON pr.id = g.recommended_product_id
   LEFT JOIN products pa ON pa.id = g.alternative_product_id
   WHERE g.search_terms % n.nq
