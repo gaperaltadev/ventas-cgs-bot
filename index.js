@@ -246,7 +246,20 @@ function mostrarPairingCode(code, phoneNumber, attempt) {
 }
 
 async function connect() {
-  const { state, saveCreds } = await useMultiFileAuthState('auth_info');
+  let { state, saveCreds } = await useMultiFileAuthState('auth_info');
+
+  // Si hay archivos en auth_info/ pero la sesión nunca completó el pairing,
+  // probablemente quedaron llaves criptográficas a medias de intentos
+  // anteriores. WhatsApp rechaza el handshake con "Connection Closed".
+  // Limpio y vuelvo a cargar el estado fresco.
+  if (!state.creds.registered) {
+    const files = await fs.readdir('auth_info').catch(() => []);
+    if (files.length > 0) {
+      console.log(`[auth] auth_info tiene ${files.length} archivos pero la sesión no está registrada → limpiando para evitar handshake corrupto`);
+      await clearAuthInfo();
+      ({ state, saveCreds } = await useMultiFileAuthState('auth_info'));
+    }
+  }
 
   const sock = makeWASocket({
     auth: state,
