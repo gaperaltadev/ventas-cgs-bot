@@ -4,6 +4,7 @@ import { promises as fs } from 'fs';
 import { handleCommand } from './commands.js';
 import { supabase } from './lib/supabase.js';
 import { sessions, isAllowed } from './lib/session.js';
+import { startAuthServer, updateAuthState } from './lib/auth-server.js';
 
 // ─── Validación de variables de entorno al arranque ──────────────────────────
 // Falla rápido con mensaje claro antes de que cualquier librería tire un stack trace.
@@ -28,6 +29,9 @@ if (warnings.length) {
 
 // Prefijo que activa el bot
 const PREFIX = process.env.BOT_PREFIX || '/';
+
+// Servidor web de vinculación (QR + pairing code via UI)
+startAuthServer();
 
 // ─── Comandos reconocidos para escape de flujo guiado ────────────────────────
 // Cualquiera de estos cancela el flujo activo y se procesa normalmente.
@@ -266,6 +270,11 @@ async function connect() {
     try {
       const code = await requestPairingWithRetry(sock, process.env.PHONE_NUMBER);
       mostrarPairingCode(code, process.env.PHONE_NUMBER, pairingAttempt);
+      updateAuthState({
+        pairingCode: code,
+        pairingGeneratedAt: Date.now(),
+        pairingExpiresAt: Date.now() + PAIRING_REFRESH_MS
+      });
     } catch (e) {
       console.error(`[pairing] Error en intento ${pairingAttempt}:`, e.message);
     }
@@ -282,19 +291,25 @@ async function connect() {
     if (pairingTimer) {
       clearInterval(pairingTimer);
       pairingTimer = null;
+      updateAuthState({ pairingCode: null, pairingGeneratedAt: null, pairingExpiresAt: null });
     }
   }
 
   sock.ev.on('connection.update', async ({ connection, lastDisconnect, qr }) => {
-    // ─── QR de fallback (solo si NO hay PHONE_NUMBER) ─────────────────────
-    if (qr && !process.env.PHONE_NUMBER) {
-      console.log('\nEscaneá este QR (Dispositivos vinculados → Vincular dispositivo):\n');
-      qrcode.generate(qr, { small: true });
+    // ─── QR — siempre se captura para la página web de vinculación ───────
+    if (qr) {
+      updateAuthState({ qr });
+      // En terminal solo lo mostramos cuando NO hay PHONE_NUMBER (modo dev)
+      if (!process.env.PHONE_NUMBER) {
+        console.log('\nEscaneá este QR (Dispositivos vinculados → Vincular dispositivo):\n');
+        qrcode.generate(qr, { small: true });
+      }
     }
 
     // ─── Conexión exitosa: resetear contador ──────────────────────────────
     if (connection === 'open') {
       stopPairingTimer();
+      updateAuthState({ connected: true, qr: null, pairingCode: null });
       console.log('✅ Bot conectado a WhatsApp');
       RECONNECT.attempts = 0;
     }
@@ -302,6 +317,7 @@ async function connect() {
     // ─── Conexión cerrada: decidir reconexión vs logout ───────────────────
     if (connection === 'close') {
       stopPairingTimer();
+      updateAuthState({ connected: false });
       const code = lastDisconnect?.error?.output?.statusCode;
 
       if (code === DisconnectReason.loggedOut) {
