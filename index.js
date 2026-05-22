@@ -37,27 +37,10 @@ if (warnings.length) {
 // Prefijo que activa el bot
 const PREFIX = process.env.BOT_PREFIX || '/';
 
-// Servidor web de vinculación (QR + pairing code via UI)
-setResetHandler(() => forceResetAuth());
-setCircuitGetter(() => CIRCUIT);
-startAuthServer();
-
-// ─── Pause switch ────────────────────────────────────────────────────────────
-// Si BOT_PAUSED=true, el bot NO se conecta a WhatsApp. Útil para detener
-// intentos durante un ban sin tener que borrar el servicio en Railway.
-// El servidor web sigue corriendo y muestra el estado de pausa.
-if (process.env.BOT_PAUSED === 'true') {
-  console.log('');
-  console.log('⏸  ═══════════════════════════════════════════════════');
-  console.log('⏸  BOT_PAUSED=true — bot pausado intencionalmente.');
-  console.log('⏸  Las conexiones a WhatsApp están detenidas.');
-  console.log('⏸  Para reactivar: quitá BOT_PAUSED de las env vars y redeploy.');
-  console.log('⏸  ═══════════════════════════════════════════════════');
-  console.log('');
-  recordAuthError('Bot pausado por BOT_PAUSED=true. Quitá la variable y redeploy para reactivar.');
-} else {
-  connect();
-}
+// El bootstrap (startAuthServer + connect) está al final del archivo,
+// DESPUÉS de declarar CIRCUIT, forceResetAuth y connect. Si se invoca acá
+// arriba, JS tira ReferenceError por Temporal Dead Zone — las `const` no
+// se hoistean como las funciones.
 
 // ─── Comandos reconocidos para escape de flujo guiado ────────────────────────
 // Cualquiera de estos cancela el flujo activo y se procesa normalmente.
@@ -590,4 +573,25 @@ function gracefulShutdown(signal) {
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT',  () => gracefulShutdown('SIGINT'));
 
-// La llamada a connect() está condicionada por BOT_PAUSED más arriba.
+// ═════════════════════════════════════════════════════════════════════════════
+// BOOTSTRAP — corre al final para que todas las `const` y funciones estén
+// inicializadas antes de invocar connect(). Mover esto arriba causa
+// ReferenceError por TDZ (CIRCUIT y forceResetAuth son `const`, no funciones).
+// ═════════════════════════════════════════════════════════════════════════════
+
+setResetHandler(() => forceResetAuth());
+setCircuitGetter(() => CIRCUIT);
+startAuthServer();
+
+if (process.env.BOT_PAUSED === 'true') {
+  console.log('');
+  console.log('⏸  ═══════════════════════════════════════════════════');
+  console.log('⏸  BOT_PAUSED=true — bot pausado intencionalmente.');
+  console.log('⏸  Las conexiones a WhatsApp están detenidas.');
+  console.log('⏸  Para reactivar: quitá BOT_PAUSED de las env vars y redeploy.');
+  console.log('⏸  ═══════════════════════════════════════════════════');
+  console.log('');
+  recordAuthError('Bot pausado por BOT_PAUSED=true. Quitá la variable y redeploy para reactivar.');
+} else {
+  connect();
+}
