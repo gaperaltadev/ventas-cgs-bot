@@ -1,7 +1,36 @@
 # Retomar — punto de partida para próxima sesión
 
-Última pausa: 2026-05-21. El bot quedó pausado en Railway tras un ban de
-WhatsApp causado por un loop tight ya solucionado en el código.
+Última pausa: 2026-05-22 (segunda pausa). Demo lista para presentar al jefe.
+
+## 🎯 Prioridad inmediata
+
+**Ir directo a [`DEMO_RUNBOOK.md`](DEMO_RUNBOOK.md)** — tiene los pasos
+exactos día-a-día para ejecutar la demo. Este documento (RETOMAR.md)
+sirve para visión general del proyecto.
+
+---
+
+## Snapshot del último avance
+
+Lo que se completó antes de pausar:
+
+- ✅ Patches anti-ban aplicados (browser fingerprint, rate limit, shutdown limpio)
+- ✅ Circuit breaker + backoff que previene loops
+- ✅ Servidor web de vinculación con QR + pairing code + diagnóstico
+- ✅ Seed SQL completo con 4 vendedores, 8 clientes y 18 movimientos (`sql/seed-demo.sql`)
+- ✅ User stories enriquecidas y guión de demo (`docs/DEMO_STORIES.md`)
+- ✅ Propuesta ejecutiva PDF para el jefe (`docs/propuesta/propuesta-cgs-bot.pdf`)
+- ✅ Runbook con pasos T-2/T-1/Día del demo (`docs/DEMO_RUNBOOK.md`)
+
+Lo que queda pendiente para ejecutar:
+
+- ⏳ Vincular el bot con el número del amigo
+- ⏳ Aplicar `sql/seed-demo.sql` en Supabase
+- ⏳ Reemplazar 2 números placeholder en `vendedores` por reales
+- ⏳ Hacer smoke test en vivo
+- ⏳ Coordinar reunión con el jefe
+
+---
 
 ## 1. Verificar antes de tocar nada (5 min)
 
