@@ -1,4 +1,9 @@
-import makeWASocket, { DisconnectReason, useMultiFileAuthState } from '@whiskeysockets/baileys';
+import makeWASocket, {
+  DisconnectReason,
+  useMultiFileAuthState,
+  fetchLatestBaileysVersion,
+  Browsers
+} from '@whiskeysockets/baileys';
 import qrcode from 'qrcode-terminal';
 import { promises as fs } from 'fs';
 import { handleCommand } from './commands.js';
@@ -6,6 +11,7 @@ import { supabase } from './lib/supabase.js';
 import { sessions, isAllowed } from './lib/session.js';
 import { startAuthServer, updateAuthState, recordAuthError, setResetHandler, setCircuitGetter } from './lib/auth-server.js';
 import { logEvent, getDisconnectReason } from './lib/diagnostics.js';
+import { send } from './lib/sender.js';
 
 // ─── Validación de variables de entorno al arranque ──────────────────────────
 // Falla rápido con mensaje claro antes de que cualquier librería tire un stack trace.
@@ -322,12 +328,41 @@ async function connect() {
 
   const { state, saveCreds } = await useMultiFileAuthState('auth_info');
 
+  // Siempre usar la última versión de WhatsApp Web que Meta acepta.
+  // Si la versión bundleada con Baileys se deprecó, este fetch trae la actual.
+  let waVersion;
+  try {
+    const { version, isLatest } = await fetchLatestBaileysVersion();
+    waVersion = version;
+    console.log(`[wa] usando WhatsApp Web v${version.join('.')} (isLatest=${isLatest})`);
+  } catch (e) {
+    console.warn(`[wa] no se pudo obtener versión latest, usando bundleada:`, e.message);
+  }
+
   const sock = makeWASocket({
     auth: state,
+    version: waVersion,                       // versión actualizada (o default si falla)
+    browser: Browsers.macOS('Desktop'),       // fingerprint legítimo (no "Baileys")
     printQRInTerminal: false,
-    syncFullHistory: false,
+    syncFullHistory: false,                   // no descargar historial completo (lento + sospechoso)
+    markOnlineOnConnect: false,               // NO anunciarse "online" 24/7
+    emitOwnEvents: false,                     // no procesar mensajes propios
+    generateHighQualityLinkPreview: false,    // no generar previews (más tráfico, más detección)
+    connectTimeoutMs: 60_000,
+    defaultQueryTimeoutMs: 60_000,
+    keepAliveIntervalMs: 25_000,
+    // Solo conversaciones 1:1: ignorar grupos, broadcasts, status updates.
+    // Reduce superficie de detección — un humano en grupo no responde a todos.
+    shouldIgnoreJid: jid =>
+      !jid ||
+      jid.endsWith('@g.us') ||                // grupos
+      jid.endsWith('@broadcast') ||           // listas de difusión
+      jid === 'status@broadcast',             // historias
     logger: { level: 'silent', trace(){}, debug(){}, info(){}, warn(){}, error(){}, fatal: console.error, child(){ return this; } }
   });
+
+  // Exponer el socket globalmente para shutdown limpio (SIGTERM/SIGINT)
+  globalThis._sock = sock;
 
   sock.ev.on('creds.update', saveCreds);
 
@@ -533,12 +568,26 @@ async function connect() {
   });
 }
 
-async function send(sock, jid, text) {
+// send() viene de lib/sender.js con rate limit + delay humano simulado.
+
+// ─── Shutdown limpio ────────────────────────────────────────────────────────
+// Si Railway envía SIGTERM (deploy nuevo, escala a cero, etc.) hay que cerrar
+// la conexión WhatsApp con un end() formal. Sin esto, Meta ve disconnect
+// abrupto y eso suma puntos al score antifraude.
+function gracefulShutdown(signal) {
+  console.log(`\n[shutdown] ${signal} recibido. Cerrando conexión WhatsApp...`);
   try {
-    await sock.sendMessage(jid, { text });
-  } catch (err) {
-    console.error(`[send error] ${err.message}`);
+    if (globalThis._sock) {
+      globalThis._sock.end(undefined);
+    }
+  } catch (e) {
+    console.error('[shutdown] error al cerrar sock:', e.message);
   }
+  // Pequeño delay para que el end() viaje al WS antes de matar el proceso
+  setTimeout(() => process.exit(0), 500);
 }
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT',  () => gracefulShutdown('SIGINT'));
 
 // La llamada a connect() está condicionada por BOT_PAUSED más arriba.
