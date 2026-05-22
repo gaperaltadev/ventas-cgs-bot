@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "manual:pdf": "node docs/manual/generate-pdf.js"
+    "manual:pdf": "node docs/manual/generate-pdf.js",
+    "propuesta:pdf": "node docs/propuesta/generate-pdf.js"
   },
   "keywords": [],
   "author": "",

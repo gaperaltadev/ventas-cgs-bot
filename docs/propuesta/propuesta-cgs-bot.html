@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Propuesta — Asistente de Ventas para WhatsApp · CGS Paraguay</title>
+<style>
+  /* ════════════════════════════════════════════════════════════════════
+     DESIGN TOKENS — idéntico al manual para consistencia visual
+     ════════════════════════════════════════════════════════════════════ */
+  :root {
+    --primary:        #0451DD;
+    --primary-dark:   #003BB0;
+    --primary-soft:   #E8EFFE;
+    --primary-tint:   #F4F7FE;
+    --ink-900: #0B1426;
+    --ink-700: #1F2A44;
+    --ink-500: #5B6478;
+    --ink-300: #B6BFD0;
+    --ink-200: #D9DEEA;
+    --ink-100: #ECEFF5;
+    --ink-50:  #F7F9FC;
+    --white:   #FFFFFF;
+    --success: #047857;
+    --success-soft: #ECFDF5;
+    --warning: #B45309;
+    --warning-soft: #FFFBEB;
+    --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px;
+    --s-5: 24px; --s-6: 32px; --s-7: 48px; --s-8: 64px; --s-9: 96px;
+    --t-display: 56px;
+    --t-h1: 42px;
+    --t-h2: 26px;
+    --t-h3: 18px;
+    --t-h4: 14px;
+    --t-body: 14px;
+    --t-small: 12px;
+    --t-mono: 13px;
+    --radius-sm: 4px;
+    --radius:    8px;
+    --radius-lg: 12px;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    font-size: var(--t-body);
+    line-height: 1.6;
+    color: var(--ink-700);
+    margin: 0;
+    background: var(--white);
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 780px; margin: 0 auto; padding: var(--s-7) var(--s-8); }
+  h1, h2, h3, h4 { color: var(--ink-900); margin: 0; line-height: 1.2; letter-spacing: -0.01em; }
+  h1 { font-size: var(--t-h1); font-weight: 800; letter-spacing: -0.02em; }
+  h2 { font-size: var(--t-h2); font-weight: 700; }
+  h3 { font-size: var(--t-h3); font-weight: 600; }
+  h4 { font-size: var(--t-h4); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--primary); }
+  p { margin: 0 0 var(--s-3); }
+  ul, ol { margin: var(--s-3) 0 var(--s-4); padding-left: var(--s-5); }
+  li { margin-bottom: var(--s-2); padding-left: var(--s-1); }
+  li::marker { color: var(--primary); font-weight: 600; }
+  ul li { list-style: none; position: relative; padding-left: var(--s-4); }
+  ul li::before { content: ''; position: absolute; left: 0; top: 0.62em; width: 6px; height: 6px; border-radius: 50%; background: var(--primary); }
+  strong { color: var(--ink-900); font-weight: 600; }
+  em { color: var(--ink-700); font-style: normal; font-weight: 500; }
+  code { background: var(--primary-soft); color: var(--primary-dark); padding: 1px 6px; border-radius: var(--radius-sm); font-family: 'Consolas', 'Monaco', monospace; font-size: var(--t-mono); font-weight: 600; white-space: nowrap; }
+
+  .section { page-break-before: always; padding-top: var(--s-5); }
+  .section:first-of-type { page-break-before: auto; }
+  .section-header { display: flex; align-items: center; gap: var(--s-4); margin-bottom: var(--s-6); padding-bottom: var(--s-4); border-bottom: 1px solid var(--ink-200); }
+  .section-num { flex: 0 0 auto; width: 44px; height: 44px; border-radius: 50%; background: var(--primary); color: var(--white); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; }
+  .section-header h2 { margin: 0; flex: 1; }
+  h3 { margin-top: var(--s-6); margin-bottom: var(--s-3); position: relative; padding-left: var(--s-4); }
+  h3::before { content: ''; position: absolute; left: 0; top: 0.18em; width: 4px; height: 0.95em; background: var(--primary); border-radius: 2px; }
+  h4 { margin-top: var(--s-5); margin-bottom: var(--s-2); }
+
+  /* Portada */
+  .cover { min-height: 100vh; display: grid; grid-template-rows: 1fr auto; padding: 0; margin: 0; page-break-after: always; background: var(--white); }
+  .cover-band { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: var(--white); padding: var(--s-9) var(--s-8) var(--s-8); display: flex; flex-direction: column; justify-content: space-between; }
+  .cover-band .logo { width: 140px; filter: brightness(0) invert(1); }
+  .cover-band .tag { text-transform: uppercase; letter-spacing: 0.2em; font-size: 11px; font-weight: 700; opacity: 0.7; margin-top: var(--s-8); }
+  .cover-content { padding: var(--s-8); background: var(--white); }
+  .cover-title { font-size: var(--t-display); font-weight: 800; color: var(--ink-900); line-height: 1.05; letter-spacing: -0.03em; margin: 0 0 var(--s-3); }
+  .cover-title em { color: var(--primary); font-style: normal; font-weight: 800; }
+  .cover-subtitle { font-size: 18px; color: var(--ink-500); margin: 0 0 var(--s-6); line-height: 1.4; }
+  .cover-meta { display: flex; gap: var(--s-6); padding-top: var(--s-5); border-top: 2px solid var(--primary); margin-top: var(--s-7); }
+  .cover-meta-item .label { text-transform: uppercase; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: var(--ink-500); margin-bottom: var(--s-1); }
+  .cover-meta-item .value { font-size: 14px; font-weight: 600; color: var(--ink-900); }
+
+  /* Command */
+  .command { position: relative; background: var(--ink-900); color: #E2E8F0; padding: var(--s-5); padding-top: var(--s-7); border-radius: var(--radius); font-family: 'Consolas', 'Monaco', monospace; font-size: var(--t-mono); line-height: 1.7; margin: var(--s-4) 0; overflow: hidden; }
+  .command::before { content: 'EJEMPLO'; position: absolute; top: var(--s-3); right: var(--s-4); font-size: 9px; letter-spacing: 0.2em; font-weight: 700; color: var(--ink-500); font-family: -apple-system, sans-serif; }
+  .command::after { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--primary); }
+  .command .you { color: #6EE7B7; font-weight: 700; }
+  .command .bot { color: #93C5FD; font-weight: 700; }
+  .command .dim { color: #94A3B8; }
+
+  /* Callouts */
+  .callout { display: flex; gap: var(--s-3); padding: var(--s-4) var(--s-5); border-radius: var(--radius); margin: var(--s-4) 0; line-height: 1.55; border-left: 4px solid var(--warning); background: var(--warning-soft); }
+  .callout::before { content: '!'; flex: 0 0 auto; width: 22px; height: 22px; border-radius: 50%; background: var(--warning); color: var(--white); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; margin-top: 1px; }
+  .callout > div { flex: 1; }
+  .callout strong { color: var(--warning); }
+  .callout.success { border-left-color: var(--success); background: var(--success-soft); }
+  .callout.success::before { content: '✓'; background: var(--success); }
+  .callout.success strong { color: var(--success); }
+  .callout.info { border-left-color: var(--primary); background: var(--primary-soft); }
+  .callout.info::before { content: 'i'; background: var(--primary); font-family: Georgia, serif; font-style: italic; }
+  .callout.info strong { color: var(--primary); }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; margin: var(--s-4) 0; font-size: var(--t-body); border-radius: var(--radius); overflow: hidden; box-shadow: 0 0 0 1px var(--ink-200); }
+  thead { background: var(--primary-tint); }
+  th { text-align: left; padding: var(--s-3) var(--s-4); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--primary); border-bottom: 2px solid var(--primary-soft); }
+  td { padding: var(--s-3) var(--s-4); border-bottom: 1px solid var(--ink-100); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:nth-child(even) { background: var(--ink-50); }
+
+  /* Badges */
+  .role-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.1em; vertical-align: middle; margin-left: var(--s-3); }
+  .role-badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; }
+  .role-badge.vendedor { background: var(--success-soft); color: var(--success); }
+  .role-badge.vendedor::before { background: var(--success); }
+  .role-badge.jefe { background: var(--primary-soft); color: var(--primary); }
+  .role-badge.jefe::before { background: var(--primary); }
+
+  /* Utils específicos de la propuesta */
+  .lead { font-size: 16px; color: var(--ink-500); line-height: 1.6; margin-bottom: var(--s-5); }
+  .kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-3); margin: var(--s-5) 0; }
+  .kpi-card { background: var(--primary-tint); border-radius: var(--radius); padding: var(--s-4); text-align: center; }
+  .kpi-card .value { font-size: 32px; font-weight: 800; color: var(--primary); line-height: 1; letter-spacing: -0.02em; }
+  .kpi-card .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-500); font-weight: 600; margin-top: var(--s-2); }
+
+  .phase-card { background: var(--ink-50); border-left: 4px solid var(--primary); border-radius: var(--radius); padding: var(--s-5); margin: var(--s-4) 0; }
+  .phase-card .phase-tag { display: inline-block; background: var(--primary); color: var(--white); font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: var(--s-3); }
+  .phase-card h3 { padding-left: 0; margin-top: 0; margin-bottom: var(--s-3); }
+  .phase-card h3::before { display: none; }
+  .phase-card .meta { font-size: 12px; color: var(--ink-500); margin-top: var(--s-3); }
+  .phase-card.current { background: var(--success-soft); border-left-color: var(--success); }
+  .phase-card.current .phase-tag { background: var(--success); }
+
+  .check-item { display: flex; gap: var(--s-3); padding: var(--s-3) 0; align-items: flex-start; }
+  .check-item::before { content: '☐'; flex: 0 0 auto; font-size: 18px; color: var(--primary); font-weight: 700; line-height: 1; }
+  .check-item.done::before { content: '✓'; color: var(--success); }
+  .check-item div { flex: 1; }
+
+  .footer-page { page-break-before: always; padding-top: var(--s-8); text-align: center; color: var(--ink-500); font-size: var(--t-small); }
+
+  @page { size: A4; margin: 16mm 14mm; }
+  @media print {
+    body { font-size: 11pt; }
+    .page { padding: 0; max-width: none; }
+    h2, h3, h4 { page-break-after: avoid; }
+    .command, .callout, table, .section-header, .phase-card, .kpi-row { page-break-inside: avoid; }
+    .no-print { display: none !important; }
+  }
+
+  .print-hint { position: fixed; top: var(--s-4); right: var(--s-4); background: var(--primary); color: white; padding: 10px 18px; border-radius: var(--radius); font-size: 13px; font-weight: 500; box-shadow: 0 8px 24px rgba(4,81,221,.25); z-index: 10; }
+  .print-hint strong { color: white; }
+</style>
+</head>
+<body>
+
+<div class="print-hint no-print">
+  📄 Guardá como PDF: <strong>Ctrl+P → Guardar como PDF</strong>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     PORTADA
+     ════════════════════════════════════════════════════════════════════ -->
+<section class="cover">
+  <div class="cover-band">
+    <svg class="logo" viewBox="0 0 74 20" xmlns="http://www.w3.org/2000/svg">
+      <style>.st0{fill:#0451DD;}</style>
+      <path class="st0" d="M28.1,2.8c0,0-0.7,0.3-1.8,1.6l-5.8,7.2V16c0,1.1,0.4,1.6,0.4,1.6h-7.2c0,0,0.4-0.6,0.4-1.6v-4.3L8.4,4.6c-1-1.3-1.8-1.7-1.8-1.7h7.2c0,0,0.2,0.7,1,1.9l2.4,3.7h0.1l2.4-3.7c0.8-1.1,1-1.9,1-1.9H28.1z"/>
+      <path class="st0" d="M42.5,2.8h-12c0,0,0.5,0.6,0.5,1.6V16c0,1.1-0.5,1.6-0.5,1.6h7.2c0,0-0.4-0.6-0.4-1.6v-3.6h5.2c3.3,0,5.8-1.7,5.8-4.8S45.9,2.8,42.5,2.8z M39.3,9.8h-2V5.6h2c1.5,0,2.6,0.6,2.6,2S40.8,9.8,39.3,9.8z"/>
+      <path class="st0" d="M66.8,6.3c0,0-0.7-0.4-1.8-0.4h-7.2v3.6h5.8c1.1,0,2-0.2,2-0.2v3.6c0,0-0.8-0.3-2-0.3h-5.7v3.6c0,1.1,0.4,1.6,0.4,1.6h-7.2c0,0,0.4-0.5,0.4-1.6V4.4c0-1.1-0.5-1.6-0.5-1.6h15.7V6.3L66.8,6.3z"/>
+    </svg>
+    <div class="tag">CGS Paraguay · Representante Oficial</div>
+  </div>
+  <div class="cover-content">
+    <h1 class="cover-title">Asistente de ventas<br>por <em>WhatsApp</em></h1>
+    <p class="cover-subtitle">
+      Propuesta de implementación interna, alcance de la demo y
+      requisitos para avanzar a la versión oficial.
+    </p>
+    <div class="cover-meta">
+      <div class="cover-meta-item">
+        <div class="label">Documento</div>
+        <div class="value">Propuesta v1.0</div>
+      </div>
+      <div class="cover-meta-item">
+        <div class="label">Fecha</div>
+        <div class="value">Mayo 2026</div>
+      </div>
+      <div class="cover-meta-item">
+        <div class="label">Audiencia</div>
+        <div class="value">Dirección CGS</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="page">
+
+<!-- ════════════════════════════════════════════════════════════════════
+     1. RESUMEN
+     ════════════════════════════════════════════════════════════════════ -->
+<section class="section">
+  <div class="section-header">
+    <div class="section-num">1</div>
+    <h2>Resumen ejecutivo</h2>
+  </div>
+
+  <p class="lead">
+    Tenemos lista una demo funcional de un asistente en WhatsApp para que los
+    vendedores de CGS consulten el catálogo de lubricantes YPF, recomienden
+    productos por vehículo y registren pedidos vinculados a clientes — sin
+    salir de WhatsApp y sin aprender a usar nada nuevo.
+  </p>
+
+  <div class="kpi-row">
+    <div class="kpi-card">
+      <div class="value">0 ₲</div>
+      <div class="label">Costo de la demo</div>
+    </div>
+    <div class="kpi-card">
+      <div class="value">3 seg</div>
+      <div class="label">Registrar un pedido</div>
+    </div>
+    <div class="kpi-card">
+      <div class="value">19</div>
+      <div class="label">Productos en catálogo</div>
+    </div>
+  </div>
+
+  <p>Esta propuesta describe:</p>
+  <ul>
+    <li>Qué <strong>problema concreto</strong> resuelve el bot en el día a día del equipo</li>
+    <li>Qué <strong>casos de uso</strong> vas a ver durante la demo</li>
+    <li>El <strong>plan de implementación</strong> en tres fases</li>
+    <li>Qué <strong>decisión y datos</strong> necesitamos de tu parte para avanzar a la versión oficial</li>
+  </ul>
+
+  <div class="callout info">
+    <div>
+      <strong>Inversión solicitada hoy:</strong> ninguna monetaria. Solo tu
+      aprobación para usar la demo con el equipo durante 2-4 semanas y la
+      documentación necesaria para iniciar la verificación oficial de WhatsApp
+      Business (proceso gratuito, ~1-7 días hábiles).
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     2. EL PROBLEMA
+     ════════════════════════════════════════════════════════════════════ -->
+<section class="section">
+  <div class="section-header">
+    <div class="section-num">2</div>
+    <h2>Qué problema estamos resolviendo</h2>
+  </div>
+
+  <h3>Hoy: información dispersa y tiempo perdido</h3>
+
+  <p>
+    En el flujo actual del equipo de ventas:
+  </p>
+  <ul>
+    <li>El vendedor anota pedidos en <strong>papel</strong> durante las visitas.</li>
+    <li>Al volver, transcribe lo anotado a <strong>WhatsApp suelto, Excel o llamadas</strong>.</li>
+    <li>Cuando un cliente pregunta "¿qué aceite va a mi Hilux 2020?", el vendedor <strong>adivina o llama a alguien</strong>.</li>
+    <li>Los reportes de ventas se arman <strong>a fin de mes, manualmente</strong>, juntando información de varios lugares.</li>
+    <li>No hay forma rápida de saber <strong>quién vendió cuánto</strong> esta semana.</li>
+  </ul>
+
+  <h3>Costo invisible que vemos todos los días</h3>
+
+  <table>
+    <thead>
+      <tr><th>Problema</th><th>Costo</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Vendedor olvida pedidos en papel</td><td>Venta perdida</td></tr>
+      <tr><td>Vendedor no sabe qué producto recomendar</td><td>Compra del competidor, mala impresión</td></tr>
+      <tr><td>Transcripción manual de pedidos</td><td>30-60 min/día/vendedor</td></tr>
+      <tr><td>Reportes mensuales armados a mano</td><td>3-4 hs/mes de la dirección</td></tr>
+      <tr><td>Sin trazabilidad por vendedor o cliente</td><td>Imposible medir o premiar performance</td></tr>
+    </tbody>
+  </table>
+
+  <h3>La causa raíz</h3>
+
+  <p>
+    El equipo ya usa WhatsApp todo el día. No necesitamos darles otra
+    herramienta — necesitamos que <strong>WhatsApp mismo</strong> haga el
+    trabajo de catálogo, registro y reportes.
+  </p>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     3. LA SOLUCIÓN
+     ════════════════════════════════════════════════════════════════════ -->
+<section class="section">
+  <div class="section-header">
+    <div class="section-num">3</div>
+    <h2>La solución: un asistente en WhatsApp</h2>
+  </div>
+
+  <p class="lead">
+    Un número de WhatsApp dedicado al que los vendedores le escriben como a
+    cualquier contacto. El asistente entiende lenguaje natural, recomienda
+    productos, registra pedidos y reporta ventas. La dirección accede a un
+    panel web complementario para gestión y análisis.
+  </p>
+
+  <h3>Lo que cambia para cada rol</h3>
+
+  <table>
+    <thead>
+      <tr><th>Rol</th><th>Hoy</th><th>Con el asistente</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Vendedor</td>
+        <td>Papel + WhatsApp suelto + memoria</td>
+        <td>Un solo chat hace todo: consulta catálogo, recomienda, registra</td>
+      </tr>
+      <tr>
+        <td>Cliente</td>
+        <td>Espera que el vendedor le diga qué aceite va</td>
+        <td>El vendedor responde con confianza al instante</td>
+      </tr>
+      <tr>
+        <td>Dirección</td>
+        <td>Excel mensual armado a mano</td>
+        <td>Reportes en tiempo real desde el celular o el panel web</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Cómo funciona técnicamente <span class="role-badge jefe">Detalle opcional</span></h3>
+
+  <ul>
+    <li>El bot vive en un servidor conectado a WhatsApp.</li>
+    <li>Los datos (productos, clientes, pedidos, vendedores) se guardan en la nube — <strong>nada se pierde si se rompe una computadora</strong>.</li>
+    <li>El panel web (cgs-paraguay.netlify.app/admin.html) ya está activo y operativo para gestionar el sistema.</li>
+    <li>La versión actual usa una conexión no-oficial a WhatsApp; la versión final usará la <strong>API oficial de Meta (WhatsApp Business Cloud API)</strong>, sin riesgo de bloqueo y con soporte oficial.</li>
+  </ul>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     4. CASOS DE USO
+     ════════════════════════════════════════════════════════════════════ -->
+<section class="section">
+  <div class="section-header">
+    <div class="section-num">4</div>
+    <h2>Casos de uso principales</h2>
+  </div>
+
+  <p class="lead">
+    Selección de los 7 flujos que vas a ver funcionando en la demo. Cada uno
+    resuelve un problema específico del día a día del equipo.
+  </p>
+
+  <h3>1. Catálogo siempre disponible <span class="role-badge vendedor">Vendedor</span></h3>
+  <p>El vendedor consulta el catálogo completo desde WhatsApp en cualquier momento.
+  Cero olvidos, cero papeles desactualizados.</p>
+  <div class="command">
+    <span class="you">Vendedor:</span> /catalogo<br>
+    <span class="bot">Bot:</span> 📋 Catálogo CGS Paraguay<br>
+    <span class="dim">&nbsp;&nbsp;&nbsp;&nbsp;</span><strong>ELAION — Autos</strong><br>
+    <span class="dim">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[20] ELAION F10 5W-30<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[21] ELAION F10 10W-40<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;...</span>
+  </div>
+
+  <h3>2. Recomendación por vehículo <span class="role-badge vendedor">Vendedor</span></h3>
+  <p>El cliente pregunta "¿qué aceite va a mi camioneta?". El vendedor escribe la marca y modelo
+  al bot y recibe la recomendación oficial al instante, con producto principal y alternativa más
+  económica si la hay.</p>
+  <div class="command">
+    <span class="you">Vendedor:</span> /guia toyota hilux 2020<br>
+    <span class="bot">Bot:</span> 🚗 <strong>Toyota Hilux (2016–2024) · diesel</strong><br>
+    <br>
+    &nbsp;&nbsp;&nbsp;&nbsp;✅ Recomendado: <strong>[26] EXTRAVIDA DX 15W-40</strong><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;↪ Alternativa: <strong>[27] EXTRAVIDA ULTRA 10W-40</strong><br>
+    <br>
+    &nbsp;&nbsp;&nbsp;&nbsp;📝 Motor 1GD-FTV 2.8L
+  </div>
+
+  <h3>3. Búsqueda que tolera errores <span class="role-badge vendedor">Vendedor</span></h3>
+  <p>El vendedor escribe rápido, en el celular, con dedo grande sobre pantalla pequeña.
+  El bot encuentra el producto aunque haya typos, falten letras o se invierta el orden.</p>
+  <div class="command">
+    <span class="you">Vendedor:</span> /buscar elaiom 5w30 <span class="dim">← typo intencional</span><br>
+    <span class="bot">Bot:</span> ¿Quisiste decir <strong>ELAION F10 5W-30</strong>?<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;1. [20] ELAION F10 5W-30 — Semi-Sintético<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;2. [23] ELAION F30 5W-30 — Sintético
+  </div>
+
+  <h3>4. Registro de pedido con cliente <span class="role-badge vendedor">Vendedor</span></h3>
+  <p>El pedido completo — cliente, productos, cantidades — en un solo mensaje, con confirmación
+  previa para evitar errores. Cada pedido queda asociado al cliente y al vendedor automáticamente.</p>
+  <div class="command">
+    <span class="you">Vendedor:</span> /pedido 80012345-1 20 5, 26 2<br>
+    <span class="bot">Bot:</span> <strong>Confirmá el pedido</strong><br>
+    <br>
+    &nbsp;&nbsp;&nbsp;&nbsp;Cliente: <strong>AUTOREPUESTOS SAN LORENZO SRL</strong><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;RUC: 80012345-1 · San Lorenzo<br>
+    <br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;• [20] ELAION F10 5W-30 ×5<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;• [26] EXTRAVIDA DX 15W-40 ×2<br>
+    <br>
+    &nbsp;&nbsp;&nbsp;&nbsp;Total: <strong>7 unidades</strong><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;👉 Respondé <strong>si</strong> o <strong>no</strong>.<br>
+    <br>
+    <span class="you">Vendedor:</span> si<br>
+    <span class="bot">Bot:</span> ✅ <strong>Pedido #1042 registrado</strong>
+  </div>
+
+  <h3>5. Alta de cliente nuevo sin frenar la venta <span class="role-badge vendedor">Vendedor</span></h3>
+  <p>Si el RUC no está cargado, el bot pregunta el nombre y registra al cliente sobre la marcha.
+  El vendedor no abandona el flujo: el pedido sigue normalmente.</p>
+  <div class="command">
+    <span class="you">Vendedor:</span> /pedido 80099999-9 20 3<br>
+    <span class="bot">Bot:</span> No tengo registrado el RUC <strong>80099999-9</strong>.<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;👉 Mandame el <strong>nombre / razón social</strong> del cliente.<br>
+    <br>
+    <span class="you">Vendedor:</span> Lubricentro El Roble SRL<br>
+    <span class="bot">Bot:</span> ✅ Cliente dado de alta. Sigo con el pedido...
+  </div>
+
+  <h3>6. Reportes en tiempo real <span class="role-badge jefe">Jefe</span></h3>
+  <p>Sin esperar a fin de mes, sin abrir Excel. La dirección consulta desde el celular en cualquier momento.</p>
+  <div class="command">
+    <span class="you">Dirección:</span> /ventas semana<br>
+    <span class="bot">Bot:</span> 📊 <strong>Ventas de la semana</strong><br>
+    <br>
+    &nbsp;&nbsp;&nbsp;&nbsp;ELAION — Autos: <strong>64 uds</strong><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;EXTRAVIDA — Camiones: <strong>79 uds</strong><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;RÖD — Motos: <strong>32 uds</strong><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<strong>Total: 175 uds</strong> (18 operaciones)<br>
+    <br>
+    <span class="you">Dirección:</span> /ranking<br>
+    <span class="bot">Bot:</span> 🏆 <strong>Top productos — últimos 7 días</strong><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;1. EXTRAVIDA DX 15W-40 — <strong>70 uds</strong><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;2. ELAION F10 5W-30 — <strong>28 uds</strong><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;3. YPF RÖD 4T 20W-50 — <strong>14 uds</strong>
+  </div>
+
+  <h3>7. Panel web para gestión y análisis <span class="role-badge jefe">Jefe</span></h3>
+  <p>
+    Complementa al bot: gestión completa del catálogo, vendedores, clientes,
+    pedidos y guía de vehículos. Filtros por fecha, vendedor o cliente.
+    Acceso desde cualquier navegador en <code>cgs-paraguay.netlify.app/admin.html</code>.
+  </p>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     5. PLAN DE IMPLEMENTACIÓN
+     ════════════════════════════════════════════════════════════════════ -->
+<section class="section">
+  <div class="section-header">
+    <div class="section-num">5</div>
+    <h2>Plan de implementación</h2>
+  </div>
+
+  <p class="lead">
+    Estrategia en tres fases. Cada una valida antes de pasar a la siguiente,
+    minimizando riesgo y costo.
+  </p>
+
+  <div class="phase-card current">
+    <span class="phase-tag">Fase 0 · Actual</span>
+    <h3>Demo funcional</h3>
+    <p>
+      Lo que estás viendo hoy. Una versión completa pero limitada usando
+      tecnología no-oficial de conexión a WhatsApp. Útil para validar la
+      idea con el equipo durante 2-4 semanas, sin compromiso.
+    </p>
+    <p class="meta">
+      <strong>Estado:</strong> Desplegado y operativo ·
+      <strong>Costo:</strong> 0 ₲ ·
+      <strong>Limitaciones:</strong> conexión no-oficial puede bloquearse
+    </p>
+  </div>
+
+  <div class="phase-card">
+    <span class="phase-tag">Fase 1 · Piloto interno</span>
+    <h3>Uso real con 3-5 vendedores</h3>
+    <p>
+      Durante 2-4 semanas, el equipo selectivo usa el bot en sus visitas
+      reales. Medimos: cantidad de pedidos cargados, frecuencia de consultas,
+      problemas reportados. Salida: decisión de avanzar (o no) a la versión
+      oficial.
+    </p>
+    <p class="meta">
+      <strong>Inicio:</strong> Apenas aprueben la demo ·
+      <strong>Duración:</strong> 2-4 semanas ·
+      <strong>Costo:</strong> 0 ₲ (mismo sistema)
+    </p>
+  </div>
+
+  <div class="phase-card">
+    <span class="phase-tag">Fase 2 · Versión oficial</span>
+    <h3>Migración a WhatsApp Business API</h3>
+    <p>
+      Cuando el piloto valide el valor, migramos a la <strong>API oficial de
+      Meta para empresas</strong>: sin riesgo de bloqueo, soporte oficial,
+      uso ilimitado dentro del free tier de Meta. La interfaz para vendedores
+      y el panel admin no cambian.
+    </p>
+    <p class="meta">
+      <strong>Pre-requisito:</strong> verificación Meta Business (1-7 días, gratis) ·
+      <strong>Tiempo de migración:</strong> 2-3 días ·
+      <strong>Costo operativo estimado:</strong> 0 ₲/mes en nuestro volumen actual
+    </p>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     6. QUÉ NECESITAMOS DE VOS
+     ════════════════════════════════════════════════════════════════════ -->
+<section class="section">
+  <div class="section-header">
+    <div class="section-num">6</div>
+    <h2>Qué necesitamos para avanzar</h2>
+  </div>
+
+  <p class="lead">
+    Tres decisiones y un conjunto acotado de información. Nada implica gasto
+    monetario aprobado hoy.
+  </p>
+
+  <h3>Decisiones</h3>
+
+  <div class="check-item">
+    <div>
+      <strong>1. Aprobar uso interno de la demo durante 2-4 semanas.</strong>
+      <br>Para que 3-5 vendedores del equipo carguen pedidos reales.
+      Sin compromiso de continuidad si no funciona.
+    </div>
+  </div>
+
+  <div class="check-item">
+    <div>
+      <strong>2. Decidir qué número de WhatsApp se va a usar.</strong>
+      <br>Opciones: (a) habilitamos un número existente para el bot —
+      ese número ya no podrá usarse en WhatsApp regular; (b) compramos
+      una SIM nueva dedicada exclusivamente al bot.
+    </div>
+  </div>
+
+  <div class="check-item">
+    <div>
+      <strong>3. Aprobar iniciar verificación Meta Business cuando la
+      demo termine bien.</strong>
+      <br>El proceso es gratuito, tarda 1-7 días hábiles, y nos da soporte
+      oficial de Meta + cero riesgo de bloqueo.
+    </div>
+  </div>
+
+  <h3>Información que necesitamos (cuando llegue Fase 2)</h3>
+
+  <ul>
+    <li>RUC y razón social oficial de CGS</li>
+    <li>Dirección fiscal completa</li>
+    <li>Datos del representante legal (Meta los verifica)</li>
+    <li>Confirmación de que el dominio <code>cgs-paraguay.netlify.app</code> es propiedad de CGS (verificación automática DNS)</li>
+    <li>Firma del representante legal en la solicitud Meta Business (online, sin papel físico)</li>
+  </ul>
+
+  <div class="callout info">
+    <div>
+      <strong>Nada de esto es vinculante hoy.</strong> Esta lista es para que
+      sepas qué vamos a pedirte si la demo se valida. Sin tu aprobación
+      formal de Fase 2, no iniciamos ninguno de estos trámites.
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     7. PROYECCIÓN A FUTURO
+     ════════════════════════════════════════════════════════════════════ -->
+<section class="section">
+  <div class="section-header">
+    <div class="section-num">7</div>
+    <h2>Lo que viene después</h2>
+  </div>
+
+  <p class="lead">
+    Una vez en Fase 2, el sistema queda como base para crecer. Estas son las
+    capacidades que se desbloquean — sin promesas de fecha, pero ya pensadas:
+  </p>
+
+  <h3>Alertas proactivas de stock crítico</h3>
+  <p>
+    Cuando un producto baja de un umbral configurable, el bot avisa
+    automáticamente a los vendedores que lo comercializan. Ya no hay que
+    consultar Excel para saber qué hay que pedir a YPF.
+  </p>
+
+  <h3>Reportes históricos y comparativos</h3>
+  <p>
+    Comparar mes contra mes, vendedor contra vendedor, cliente contra
+    cliente. Detectar caídas o crecimientos antes de que sean evidentes.
+  </p>
+
+  <h3>Precios y totales monetarios</h3>
+  <p>
+    Hoy el bot maneja unidades. Cuando carguemos la lista de precios actual,
+    cada pedido va a reportar el total en guaraníes — y los reportes pasan a
+    incluir cifras de facturación, no solo cantidades.
+  </p>
+
+  <h3>Integración con sistema interno actual</h3>
+  <p>
+    Exportación automática de pedidos al sistema contable o de gestión que
+    use CGS hoy. Forma exacta a definir cuando sepamos cuál es.
+  </p>
+
+  <h3>Comandos avanzados para dirección</h3>
+  <p>
+    <code>/vendedor [número]</code> para ver el resumen de un vendedor
+    específico. <code>/cliente [RUC]</code> para ver el historial de un
+    cliente. <code>/pedido [#]</code> para ver detalle de un pedido viejo.
+    Todo desde WhatsApp, sin abrir computadora.
+  </p>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     8. PRÓXIMO PASO
+     ════════════════════════════════════════════════════════════════════ -->
+<section class="section">
+  <div class="section-header">
+    <div class="section-num">8</div>
+    <h2>El próximo paso</h2>
+  </div>
+
+  <p class="lead">
+    Si después de ver la demo te convence, el plan inmediato es:
+  </p>
+
+  <div class="check-item done">
+    <div>
+      <strong>Demo en vivo · ya completada</strong>
+      <br>Lo que ves en este documento, mostrado en tu propio celular.
+    </div>
+  </div>
+
+  <div class="check-item">
+    <div>
+      <strong>Aprobación verbal de uso interno</strong>
+      <br>Suficiente para arrancar el piloto. Sin papeles.
+    </div>
+  </div>
+
+  <div class="check-item">
+    <div>
+      <strong>Selección de 3-5 vendedores piloto</strong>
+      <br>Los que ya usan más activamente WhatsApp serían los candidatos
+      naturales.
+    </div>
+  </div>
+
+  <div class="check-item">
+    <div>
+      <strong>Revisión de resultados después de 2-4 semanas</strong>
+      <br>Con números concretos: cuántos pedidos pasaron por el bot, qué
+      vendedores lo usaron más, qué problemas aparecieron.
+    </div>
+  </div>
+
+  <div class="check-item">
+    <div>
+      <strong>Decisión sobre Fase 2</strong>
+      <br>Si los números justifican, arrancamos verificación oficial Meta.
+      Si no, descartamos sin pérdida.
+    </div>
+  </div>
+
+  <div class="callout success">
+    <div>
+      <strong>El compromiso de hoy es solo dejar que el equipo lo pruebe.</strong>
+      Todo lo demás se decide con datos reales después del piloto.
+    </div>
+  </div>
+</section>
+
+<div class="footer-page">
+  CGS Paraguay · Representante Oficial YPF<br>
+  Propuesta — Asistente de Ventas WhatsApp · v1.0 · Mayo 2026<br>
+  <br>
+  Documento preparado para revisión interna por la dirección.
+</div>
+
+</div>
+</body>
+</html>
