@@ -1,167 +1,236 @@
-# Retomar — punto de partida para próxima sesión
+# Retomar — punto de partida
 
-Última pausa: 2026-05-22 (segunda pausa). Demo lista para presentar al jefe.
+Última actualización: 2026-05-22 (después del segundo ban con número limpio).
 
-## 🎯 Prioridad inmediata
+## 🎯 Cambio radical de arquitectura
 
-**Ir directo a [`DEMO_RUNBOOK.md`](DEMO_RUNBOOK.md)** — tiene los pasos
-exactos día-a-día para ejecutar la demo. Este documento (RETOMAR.md)
-sirve para visión general del proyecto.
-
----
-
-## Snapshot del último avance
-
-Lo que se completó antes de pausar:
-
-- ✅ Patches anti-ban aplicados (browser fingerprint, rate limit, shutdown limpio)
-- ✅ Circuit breaker + backoff que previene loops
-- ✅ Servidor web de vinculación con QR + pairing code + diagnóstico
-- ✅ Seed SQL completo con 4 vendedores, 8 clientes y 18 movimientos (`sql/seed-demo.sql`)
-- ✅ User stories enriquecidas y guión de demo (`docs/DEMO_STORIES.md`)
-- ✅ Propuesta ejecutiva PDF para el jefe (`docs/propuesta/propuesta-cgs-bot.pdf`)
-- ✅ Runbook con pasos T-2/T-1/Día del demo (`docs/DEMO_RUNBOOK.md`)
-
-Lo que queda pendiente para ejecutar:
-
-- ⏳ Vincular el bot con el número del amigo
-- ⏳ Aplicar `sql/seed-demo.sql` en Supabase
-- ⏳ Reemplazar 2 números placeholder en `vendedores` por reales
-- ⏳ Hacer smoke test en vivo
-- ⏳ Coordinar reunión con el jefe
-
----
-
-## 1. Verificar antes de tocar nada (5 min)
-
-### a) Estado del ban
-- Han pasado **al menos 24-48h** desde que pausamos el bot? → seguir abajo
-- Si no llegaste a esperar, **no quites `BOT_PAUSED=true` todavía**
-
-### b) Estado en Railway
-- Service → Variables → confirmar que `BOT_PAUSED=true` está seteado
-- Si no está, agregalo antes de hacer cualquier cosa
-
-### c) Estado en Supabase
-Confirmar que las 7 migraciones SQL están aplicadas. SQL Editor:
-
-```sql
-SELECT tablename FROM pg_tables WHERE schemaname = 'public'
-  AND tablename IN ('products','vendedores','vehicle_guide','clientes','pedidos','pedido_items','sales');
--- Deberían aparecer las 7 tablas
-```
-
-Si falta alguna, ejecutar el `sql/0X-*.sql` correspondiente en orden.
-
-## 2. Probar la vinculación (después del wait)
-
-1. Railway → Variables → **borrar `BOT_PAUSED`**
-2. Esperar ~30s al redeploy
-3. Abrir la URL pública con el token (está en los logs al arrancar)
-4. Verificar:
-   - **Caso A — funciona**: el bot conecta. La página muestra "✓ Conectado". Pasar a la sección 3.
-   - **Caso B — vuelve a fallar**: el nuevo circuit breaker se va a activar después de 3 intentos y pausará 1h. La página va a mostrar el banner rojo con botón "Reset manual". **NO apretar el reset** — esperar otras 24h e intentar de nuevo.
-   - **Caso C — falla después de varios días**: número permanentemente baneado. Conseguir otro número o evaluar WhatsApp Business Cloud API.
-
-## 3. Smoke tests cuando vincule (10 min)
-
-Desde un número autorizado (cargado en tabla `vendedores`):
+**Baileys queda DEPRECADO**. La nueva arquitectura es:
 
 ```
-/ayuda                           → menú visible
-/catalogo                        → 19 productos agrupados
-/buscar elaiom 5w30              → matchea ELAION F10 5W-30 (typo tolerado)
-/guia toyota corolla 2018        → recomienda producto
-/vender 20                       → registra venta rápida
-/pedido                          → flujo guiado de pedido
-/mispedidos                      → lista vacía o con tests previos
-/salir                           → cancela cualquier flujo
+Vendedor (WhatsApp)
+   ↓
+Meta WhatsApp Cloud API (oficial)
+   ↓ webhook POST
+n8n self-hosted en Railway (pasarela)
+   ↓ HTTP POST con datos limpios
+Backend Node.js en Railway (lógica + Supabase)
+   ↓ HTTP response con texto
+n8n → Meta Send API → Vendedor
 ```
 
-Verificar en panel admin (`cgs-paraguay.netlify.app/admin.html`):
-- Tab "Pedidos" muestra los pedidos de prueba
-- Tab "Clientes" muestra clientes creados on-the-fly
+**Por qué este cambio**:
+- 2 números distintos baneados sin completar 1 vinculación exitosa
+- La IP de Railway quedó marcada como "datacenter sospechoso" por antifraude de Meta
+- Baileys (cliente no oficial) ya no es viable desde esta infraestructura
+- Solución oficial: Meta Cloud API (gratis hasta 1.000 conv/mes — sobra para 5-10 vendedores)
+- n8n actúa como pasarela libre/gratis evitando proveedores pagos (Respond.io, etc)
+
+## 📌 Estado de la conversación al pausar
+
+Ya alineamos:
+
+1. **Decisión arquitectónica**: Opción 2 — n8n como pasarela + backend Node con la lógica de negocio. NO todo en n8n. NO mantener Baileys.
+
+2. **Hosting**: ambos servicios (n8n + backend) en el mismo proyecto Railway. Costo esperado: ~$0-5/mes dentro del crédito hobby. Usuario aceptó pagar hasta $5-10 USD si hiciera falta.
+
+3. **Sesión conversacional**: in-memory en el backend Node, suficiente para la demo. Migrar a Supabase después si hace falta robustez.
+
+## ✅ Lo que está confirmado
+
+- Reutilizamos `lib/pedidos.js`, `lib/search.js`, `lib/supabase.js`, `lib/format.js`, `handlers/*.js`, todo `sql/`
+- Reescribimos `index.js` desde cero (de Baileys bootstrap → Express server con POST /webhook)
+- Reescribimos `commands.js` mínimamente (cambio: `jid.split('@')[0]` → `wa_phone` directo)
+- Borramos: `lib/auth-server.js`, `lib/diagnostics.js`, `lib/sender.js`, `lib/session.js` parcial
+- Sacamos deps: `@whiskeysockets/baileys`, `qrcode`, `qrcode-terminal`
+- Agregamos deps: `express` (o `fastify`), nada más
+- Archivamos a `docs/_archive/`: `AUTH_SERVER.md`, `DEMO_RUNBOOK.md`, este `RETOMAR.md` viejo
+
+## 🚀 Plan de ejecución para mañana
+
+### FASE A — Barrido del repositorio (~30 min)
+
+1. **Reducir `index.js`** a stub con TODO claro (placeholder para Express)
+2. **Borrar archivos huérfanos**:
+   ```
+   lib/auth-server.js
+   lib/diagnostics.js
+   lib/sender.js
+   nodemon.json           (config era para --ignore auth_info/)
+   .railwayignore         (era para ignorar auth_info)
+   supabase_sales.sql     (root — duplicado de sql/)
+   ```
+3. **Actualizar `package.json`**:
+   - Sacar: `@whiskeysockets/baileys`, `qrcode`, `qrcode-terminal`
+   - Agregar: `express`
+   - Scripts `manual:pdf` y `propuesta:pdf` se mantienen
+4. **Limpiar `.env.example`** y `.env`:
+   - Sacar: `PHONE_NUMBER`, `AUTH_SERVER_TOKEN`, `BOT_PAUSED`
+   - Agregar placeholders: `META_VERIFY_TOKEN`, `META_PHONE_NUMBER_ID`, `META_ACCESS_TOKEN`, `N8N_SHARED_SECRET`
+5. **Archivar docs Baileys-era** moviendo a `docs/_archive/`:
+   - `docs/AUTH_SERVER.md`
+   - `docs/DEMO_RUNBOOK.md` (era todo Baileys vinculación)
+6. **Actualizar `.gitignore`**: sacar `auth_info/`
+7. **Actualizar README.md**: reflejar nueva arquitectura
+8. **Commit**: "refactor: deprecar Baileys, preparar terreno para Cloud API"
+
+### FASE B — Reescritura del backend (~4-6 horas)
+
+1. **Nuevo `index.js`** con Express:
+   ```js
+   import express from 'express';
+   import { handleCommand } from './commands.js';
+   import { getSession, updateSession } from './lib/session.js';
+   import { isAllowed } from './lib/allowlist.js';
+
+   const app = express();
+   app.use(express.json());
+
+   // Endpoint que n8n llama tras recibir webhook de Meta
+   app.post('/webhook', authMiddleware, async (req, res) => {
+     const { wa_phone, text } = req.body;
+     if (!await isAllowed(wa_phone)) {
+       return res.json({ text: 'Sin acceso. Contactá al admin.' });
+     }
+     const session = getSession(wa_phone);
+     const { command, args } = parseIntent(text, session);
+     const result = await handleCommand(command, args, supabase, session, wa_phone);
+     if (result?._session) updateSession(wa_phone, result._session);
+     res.json({ text: result.text || result });
+   });
+
+   app.listen(process.env.PORT || 3000);
+   ```
+
+2. **Adaptar `commands.js`**:
+   - Cambiar firma `handleCommand(command, args, supabase, session, jid)` → mismo pero `jid` ahora es `wa_phone` directo
+   - El switch interno no cambia
+
+3. **Adaptar `lib/session.js`**:
+   - Sigue siendo Map in-memory
+   - Key cambia de `jid` (`595XX@s.whatsapp.net`) a `wa_phone` (`595XX`)
+   - `isAllowed()` queda igual (ya recibe el número limpio)
+
+4. **Adaptar `parseIntent`** (estaba en `index.js`):
+   - Mover a `lib/parser.js`
+   - Quitar referencias a `KNOWN_COMMANDS_RE` redundantes
+   - El pipeline de 12 pasos se conserva tal cual
+
+5. **Crear `lib/allowlist.js`** (extraer de `lib/session.js`):
+   - Solo la cache + isAllowed
+   - Razón: separar responsabilidades
+
+6. **Tests manuales**:
+   - `curl POST /webhook` con payloads simulados
+   - Verificar que cada comando del bot original siga funcionando
+
+### FASE C — n8n workflow (~2 horas)
+
+1. **Levantar n8n en Railway** como segundo servicio del mismo proyecto
+2. **Crear workflow "Meta to Backend"**:
+   - Webhook Trigger (URL pública)
+   - Function node: parsear payload de Meta, extraer `wa_phone` y `text`
+   - HTTP Request: POST al backend con `{wa_phone, text}` + header `X-Secret`
+   - HTTP Request: POST a Meta Send API con la respuesta
+3. **Configurar URL del webhook en Meta Developer Dashboard** apuntando a n8n
+4. **Verificar end-to-end**: vendedor manda mensaje → llega a backend → responde
+
+### FASE D — Verificación Meta Business (calendario)
+
+**Esta fase es del jefe, no tuya.**
+
+1. Preparar checklist de documentos necesarios (RUC, escritura, datos representante)
+2. Mostrar la demo (con datos de seed) usando el backend local o mock de n8n
+3. Pedir aprobación + firma para iniciar verificación
+4. Meta tarda 1-7 días en aprobar
+5. Una vez aprobado: obtener `PHONE_NUMBER_ID`, `WHATSAPP_BUSINESS_ACCOUNT_ID`, `ACCESS_TOKEN` permanente
+
+## 📂 Archivos clave del estado actual
+
+### Se conservan tal cual
+
+- `lib/supabase.js` — cliente Supabase singleton
+- `lib/pedidos.js` — buscarCliente, crearCliente, crearPedido, etc
+- `lib/search.js` — wrappers de RPCs Supabase
+- `lib/format.js` — templates de mensaje (limpiar comentarios "Baileys")
+- `handlers/buscar.js`, `handlers/guia.js`, `handlers/pedido.js`, `handlers/mispedidos.js`
+- Todo `sql/`
+- `docs/USER_STORIES.md`, `docs/DEMO_STORIES.md`
+- `docs/manual/`, `docs/propuesta/`
+
+### Se reescriben
+
+- `index.js` — de Baileys bootstrap a Express server
+- `commands.js` — ajuste menor en firma de handleCommand
+- `lib/session.js` — separar allowlist + cambiar key jid → wa_phone
+
+### Se borran
+
+- `lib/auth-server.js`
+- `lib/diagnostics.js`
+- `lib/sender.js`
+- `nodemon.json`
+- `.railwayignore`
+- `supabase_sales.sql` (root, duplicado)
+- `auth_info/` (directorio local — Railway volume se puede borrar también)
+
+### Se archivan a `docs/_archive/`
+
+- `docs/AUTH_SERVER.md`
+- `docs/DEMO_RUNBOOK.md`
+
+## 🔑 Variables de entorno
+
+### Quitar de `.env` y `.env.example`
+
+```
+PHONE_NUMBER
+AUTH_SERVER_TOKEN
+BOT_PAUSED
+```
+
+### Agregar
+
+```
+# Meta WhatsApp Cloud API
+META_VERIFY_TOKEN=               # token que n8n verifica con Meta
+META_PHONE_NUMBER_ID=            # ID del número WhatsApp Business (después de verificar)
+META_ACCESS_TOKEN=               # token permanente de Meta (después de verificar)
+
+# Seguridad entre n8n y backend
+N8N_SHARED_SECRET=               # header X-Secret que n8n envía al backend
+```
+
+### Se mantienen
+
+```
+SUPABASE_URL
+SUPABASE_SERVICE_KEY
+ALLOWED_NUMBERS
+BOT_PREFIX
+PORT                             # Railway lo asigna automáticamente
+```
+
+## 🛑 No hacer mañana
+
+- ❌ NO intentar reactivar el bot Baileys actual en Railway. Los 2 números están quemados, la IP también.
+- ❌ NO borrar el volumen `auth_info` en Railway todavía — esperar a que confirmemos que la migración funciona.
+- ❌ NO iniciar verificación Meta Business sin aprobación del jefe.
+- ❌ NO comprar SIMs adicionales — el número del demo va a ser el que el jefe apruebe oficialmente.
+
+## 🚨 Si el jefe pregunta hoy "¿el bot funciona?"
+
+Respuesta corta y honesta:
+
+> *"Lo que tenía funcionaba pero usaba una conexión no oficial a WhatsApp que termina siendo bloqueada. Estoy migrando al sistema oficial de Meta — gratis para nuestro volumen, sin riesgo de bloqueo, soporte oficial. Necesito 2-3 días para tenerlo listo y tu firma para iniciar la verificación de Meta Business con los documentos de la empresa."*
+
+## 📌 Continuación inmediata mañana
+
+1. Abrir esta `RETOMAR.md` primero
+2. Ejecutar FASE A (barrido)
+3. Empezar FASE B (reescritura backend)
+4. FASE C (n8n) puede ser en paralelo o el día siguiente
+5. FASE D depende del jefe — adelantar conversación con él lo antes posible
 
 ---
 
-## 4. Roadmap de mejoras (ordenado por valor/costo)
-
-El review técnico identificó 7 mejoras críticas. Ordenado para retomar:
-
-### Quick wins — 1 hora total
-
-| # | Tarea | Tiempo | Riesgo |
-|---|-------|--------|--------|
-| P4 | Sacar código muerto: `searchProducts`, `normalize`, `cmdProducto`, `cmdCategoria` de `commands.js` | 30 min | Bajo |
-| P7 | Hacer `reset()` en `data.js` seguro (eliminar array DEFAULTS de 374 líneas) | 15 min | Bajo |
-| P5 | Trigger SQL que normaliza RUC (saca guiones, deja solo dígitos) | 15 min | Bajo |
-| P6 | Trigger SQL `updated_at` automático en todas las tablas | 15 min | Bajo |
-
-### Refactor estructural — 1-2 días
-
-| # | Tarea | Tiempo | Beneficio |
-|---|-------|--------|-----------|
-| P2 | **Registry declarativo de comandos** (reemplazar las 3 fuentes de verdad: `parseIntent`, `KNOWN_COMMANDS_RE`, `handleCommand`) | 4-6h | Agregar comandos sin romper nada |
-| P1 | **Unificar `sales` + `pedidos`** en tabla `transactions` | 1 día | Reportes consistentes, desbloquea FASE 3 |
-| P3 | Extraer template HTML de `auth-server.js` a `lib/views/` | 1-2h | Mantenibilidad |
-
-**Recomendación de orden cuando vuelvas:**
-
-1. **Si la vinculación fue exitosa**: arrancar por los 4 quick wins (P4→P7→P5→P6). Casi sin riesgo, dejan el código y la DB más limpios para el resto.
-
-2. **Después**: P2 (registry) — es la base que va a hacer más fáciles las features futuras.
-
-3. **Después**: P1 (unificar transactions) — es la migración más jugosa porque desbloquea FASE 3 (notificaciones de stock) y los reportes consolidados.
-
-4. **Después**: FASE 3 — Notificaciones de stock vía Supabase Realtime.
-
----
-
-## 5. Referencia rápida — archivos clave
-
-### Bot
-- `index.js` — bootstrap, parseIntent, conexión WhatsApp
-- `commands.js` — router (TIENE CÓDIGO MUERTO, ver P4)
-- `lib/session.js` — sesiones + cache de allowlist
-- `lib/pedidos.js` — lógica de clientes y pedidos
-- `lib/auth-server.js` — servidor web de vinculación (con circuit breaker y reset)
-- `lib/diagnostics.js` — tracker de eventos para debugging
-- `handlers/` — un archivo por dominio (buscar, guia, pedido, mispedidos)
-
-### Landing
-- `index.html` + `js/app.js` — sitio público
-- `admin.html` + `js/admin.js` — panel admin (productos + auth)
-- `js/admin-{vehiculos,vendedores,clientes,pedidos}.js` — tabs nuevas
-- `js/data.js` — capa de datos (TIENE DEFAULTS HARDCODED, ver P7)
-
-### SQL
-- `sql/0X-*.sql` — migraciones idempotentes, ejecutar en orden
-- `sql/seed-vehicle-guide.sql` — 44 vehículos común PY (ya ejecutado)
-
----
-
-## 6. Si algo se rompió en mi ausencia
-
-| Síntoma | Causa probable | Fix |
-|---------|---------------|-----|
-| Bot no responde a nadie | Sesión expirada o `vendedores` vacía | Verificar logs + agregar vendedor en panel |
-| Panel admin login falla | Sign-up Email Provider deshabilitado | Authentication → Providers → Email ON, signups OFF |
-| URL pública del bot 404 | Railway domain expiró/se borró | Settings → Networking → Generate Domain de nuevo |
-| Pedidos no se crean | Vendedor no está en tabla con `activo=true` | Panel admin → Vendedores → editar |
-
----
-
-## 7. Contactos / accesos
-
-- **Repo bot**: github.com/gaperaltadev/ventas-cgs-bot
-- **Repo landing**: github.com/gaperaltadev/cgs
-- **Bot live**: Railway (URL en variables del servicio)
-- **Landing live**: cgs-paraguay.netlify.app
-- **Admin**: cgs-paraguay.netlify.app/admin.html
-- **DB**: Supabase project (URL en `SUPABASE_URL` env)
-
----
-
-*Cuando retomes, leé este archivo primero. Después decidí si arrancar por
-testing del bot (sección 2) o directo por el roadmap de mejoras (sección 4).
-Buen descanso.*
+*Buen descanso. Mañana arrancamos con FASE A directo, sin replantear nada de lo decidido hoy.*
