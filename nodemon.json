@@ -1,8 +1,0 @@
-{
-  "watch": [".", ".env"],
-  "ext": "js,json",
-  "ignore": ["auth_info/"],
-  "execMap": {
-    "js": "node --env-file=.env"
-  }
-}

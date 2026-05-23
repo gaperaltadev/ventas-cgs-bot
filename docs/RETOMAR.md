@@ -1,6 +1,22 @@
 # Retomar — punto de partida
 
-Última actualización: 2026-05-22 (después del segundo ban con número limpio).
+Última actualización: 2026-05-23 (post FASE A — barrido completado).
+
+## ✅ FASE A — COMPLETADA
+
+- Stories re-priorizadas con framework Valor × Esfuerzo × Riesgo (docs/USER_STORIES.md, docs/DEMO_STORIES.md, docs/PILOTO_BACKLOG.md)
+- Borrados: `lib/auth-server.js`, `lib/diagnostics.js`, `lib/sender.js`, `nodemon.json`, `.railwayignore`, `supabase_sales.sql`, `auth_info/`
+- `package.json` limpio: 1 dependencia (`@supabase/supabase-js`). Antes: 4 con 134 transitivas. Ahora: 10 transitivas totales.
+- `index.js` reducido a stub claro con instrucciones para FASE B
+- `.env.example` actualizado con placeholders para Meta + n8n
+- Docs Baileys-era archivados en `docs/_archive/`
+- README actualizado con la nueva arquitectura
+
+## 🔜 FASE B — Próxima sesión
+
+**Reescribir el backend como Express server con webhook receiver.**
+
+
 
 ## 🎯 Cambio radical de arquitectura
 
@@ -74,6 +90,10 @@ Ya alineamos:
 8. **Commit**: "refactor: deprecar Baileys, preparar terreno para Cloud API"
 
 ### FASE B — Reescritura del backend (~4-6 horas)
+
+**Pre-tareas dentro de B**:
+- **Limpiar `commands.js`**: borrar `cmdVenta`, `cmdVentaFlujo`, `cmdVentaCantidad`, `cmdMultiVenta` y todos los cases del switch correspondientes (`!v`, `!venta`, `__venta_flujo__`, `__venta_cantidad__`). Eliminar también `cmdSelect` o consolidarlo dentro de handlers que aún lo necesiten. La decisión MVD descartó `/vender` anónimo.
+- **Migrar lógica de `parseIntent`** (hoy en `index.js`) a un nuevo `lib/parser.js`. El array `KNOWN_COMMANDS_RE` también pasa ahí. Liberar `index.js` para que sea solo bootstrap Express.
 
 1. **Nuevo `index.js`** con Express:
    ```js

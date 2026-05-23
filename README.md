@@ -1,110 +1,92 @@
 # CGS Bot — WhatsApp para vendedores
 
-Bot de WhatsApp para el equipo de ventas de CGS Paraguay. Permite consultar el catálogo de lubricantes YPF, recomendar productos por vehículo, registrar ventas y pedidos, y ver reportes — directamente desde WhatsApp.
+Asistente de WhatsApp para el equipo de ventas de **CGS Paraguay**
+(distribuidor oficial de lubricantes YPF). Los vendedores consultan el
+catálogo, recomiendan productos por vehículo, y registran pedidos —
+directamente desde WhatsApp sin instalar nada.
 
-## Comandos disponibles
+## Arquitectura
 
-Todos los comandos se activan con el prefijo `/` (configurable vía `BOT_PREFIX`).
+```
+Vendedor (WhatsApp del celular)
+        ↓
+Meta WhatsApp Cloud API (oficial)
+        ↓ webhook POST
+n8n self-hosted (Railway) — pasarela
+        ↓ HTTP POST con datos limpios
+Backend Node.js (Railway) — este repo
+        ↓ queries
+Supabase (Postgres + Auth)
+        ↑
+   Panel Admin Web (Netlify — repo cgs-landing)
+```
 
-### Consultas de catálogo
+**Stack**:
+- **Backend**: Node.js 20 ESM, Express (TBD en FASE B), Supabase JS
+- **Pasarela**: n8n self-hosted en Railway
+- **WhatsApp**: Meta Cloud API oficial (no Baileys ni clientes no oficiales)
+- **DB**: Supabase (Postgres + RLS + Auth)
+- **Hosting**: Railway (backend + n8n)
+
+## Estado actual del proyecto
+
+El repo está en **transición**:
+
+- ✅ Schema de DB completo y aplicado en Supabase (`sql/`)
+- ✅ Lógica de negocio implementada (`handlers/`, `lib/`)
+- ✅ Cliente de Supabase listo (`lib/supabase.js`)
+- ✅ User stories priorizadas (`docs/USER_STORIES.md`, `docs/DEMO_STORIES.md`)
+- ⏳ **Pendiente**: reescribir `index.js` como Express server con `POST /webhook` (FASE B)
+- ⏳ **Pendiente**: configurar n8n workflow Meta ↔ backend (FASE C)
+- ⏳ **Pendiente**: verificación Meta Business (FASE D — depende del cliente)
+
+Ver `docs/RETOMAR.md` para el plan completo.
+
+## Comandos del bot (target)
+
+Activación con prefijo `/` (configurable vía `BOT_PREFIX`).
+
+### Consultas
 
 | Comando | Descripción |
 |---------|-------------|
-| `/ayuda` | Menú completo de comandos |
-| `/catalogo` | Lista todos los productos agrupados por categoría |
-| `/[ID]` | Ficha detallada de un producto (ej: `/20`) |
-| `/auto` · `/moto` · `/camion` · `/otros` | Productos por categoría |
-| `/destacados` | Productos marcados como destacados |
+| `/ayuda` | Menú con todos los comandos |
+| `/catalogo` | Lista todos los productos por categoría |
+| `/[ID]` | Ficha de un producto (ej: `/20`) |
 | `/buscar [texto]` | Búsqueda inteligente tolerante a typos |
-| `/guia [marca modelo año]` | Recomendación de lubricante por vehículo |
+| `/guia [vehículo]` | Recomendación de lubricante por marca/modelo/año |
 
-### Registro de ventas (mostrador, sin cliente identificado)
-
-| Comando | Descripción |
-|---------|-------------|
-| `/vender` | Inicia flujo guiado paso a paso |
-| `/vender [ID]` | Registra 1 unidad |
-| `/vender [ID] [cant]` | Registra N unidades |
-| `/vender [ID] [cant], [ID] [cant]` | Multi-venta en un solo mensaje |
-
-### Pedidos con cliente identificado (ruta)
+### Registros
 
 | Comando | Descripción |
 |---------|-------------|
-| `/pedido` | Inicia flujo guiado: cliente → items → confirmación |
-| `/pedido [RUC] [ID] [cant], ...` | Atajo directo con todo en un mensaje |
-| `/mispedidos` | Tus últimos 10 pedidos |
-
-Si el RUC no existe en la base, el bot pregunta la razón social y crea el cliente automáticamente.
+| `/pedido` | Flujo guiado: cliente → items → confirmación |
+| `/pedido [RUC] [ID cant, ID cant]` | Atajo directo con todo en un mensaje |
+| `/mispedidos` | Últimos 10 pedidos del vendedor |
 
 ### Reportes
 
 | Comando | Descripción |
 |---------|-------------|
-| `/ventas` · `/ventas semana` | Resumen del día / últimos 7 días |
-| `/ranking` · `/top` | Top 5 productos más vendidos en la semana |
+| `/ventas` | Resumen del día |
+| `/ventas semana` | Resumen últimos 7 días |
+| `/ranking` | Top 5 productos vendidos en la semana |
 
-### Control de flujo
+### Control
 
 | Comando | Descripción |
 |---------|-------------|
-| `/salir` · `/chau` · `/cancelar` | Cancela cualquier flujo activo |
+| `/salir` · `/chau` | Cancela cualquier flujo activo |
 
-Cuando el bot muestra una lista numerada (selección de producto, cliente, etc.), respondés con `1`, `2`... sin barra. Cuando el bot espera una cantidad o respuesta libre, también respondés directo sin barra.
-
-## Características técnicas
-
-### Búsqueda inteligente
-
-`/buscar` usa **pg_trgm** (Postgres trigram similarity) con tokenización: divide la query en palabras y matchea cada una individualmente. Esto hace que `elaiom 5w30` (con typo) encuentre `ELAION F10 5W-30`. Si no hay match en productos, el bot consulta automáticamente la guía de vehículos.
-
-### Flujos guiados
-
-Para tareas con múltiples pasos (venta, pedido), el bot mantiene una **sesión por conversación** con `flowStep` que indica qué espera del usuario. Cualquier comando conocido cancela el flujo automáticamente — escape natural sin tener que escribir `/salir`.
-
-### Vinculación con WhatsApp
-
-Soporta dos modos:
-- **Pairing code** (recomendado para servidor): pone `PHONE_NUMBER=595...` en env. El bot imprime un código de 8 caracteres en logs y lo regenera cada 90s hasta que vinculás.
-- **QR** (fallback local): si no hay `PHONE_NUMBER`, el bot imprime un QR en la terminal.
-
-Auto-recovery: si WhatsApp cierra la sesión, el bot limpia `auth_info/`, reconecta y genera un nuevo pairing code automáticamente.
-
-### Allowlist de vendedores
-
-Solo responde a números registrados en la tabla `vendedores` con `activo = TRUE`. La cache se refresca cada 5 minutos — al dar de alta a alguien desde el panel admin, en máximo 5 min puede usar el bot.
-
-## Stack
-
-- **Bot:** [Baileys v7](https://github.com/whiskeysockets/baileys) (cliente WhatsApp Web no oficial)
-- **DB:** [Supabase](https://supabase.com) (Postgres + Auth + Realtime)
-- **Hosting bot:** [Railway](https://railway.com) (con volumen persistente para `auth_info/`)
-- **Hosting panel admin:** [Netlify](https://www.netlify.com) (en el repo `cgs-landing`)
-- **Runtime:** Node.js 20 ESM, sin TypeScript ni frameworks
-
-## Requisitos
-
-- Node.js 20+
-- Cuenta en Supabase con las migraciones de `sql/` aplicadas
-- Número de WhatsApp dedicado para el bot (no es tu personal — es para que el equipo le escriba)
-
-## Configuración local
+## Setup local
 
 ```bash
-# 1. Instalar dependencias
+git clone https://github.com/gaperaltadev/ventas-cgs-bot.git
+cd ventas-cgs-bot
 npm install
-
-# 2. Crear archivo de entorno
-cp .env.example .env
-# Editar .env con las credenciales
-
-# 3. Levantar en modo desarrollo (con nodemon + auto-restart al cambiar .env)
+cp .env.example .env   # editar con credenciales
 npm run dev
 ```
-
-La primera vez:
-- Si pusiste `PHONE_NUMBER` → te aparece el pairing code en la terminal.
-- Si no → te aparece un QR. Escanealo desde WhatsApp → **Dispositivos vinculados → Vincular dispositivo**.
 
 ## Variables de entorno
 
@@ -115,96 +97,74 @@ Ver `.env.example`. Resumen:
 | `SUPABASE_URL` | ✅ | URL del proyecto Supabase |
 | `SUPABASE_SERVICE_KEY` | ✅ | Service role key (bypasea RLS) |
 | `BOT_PREFIX` | — | Prefijo de comandos (default: `/`) |
-| `PHONE_NUMBER` | — | Solo para vinculación inicial vía pairing code. Después se puede borrar |
-| `ALLOWED_NUMBERS` | — | Fallback de allowlist si la tabla `vendedores` está vacía (modo dev) |
+| `ALLOWED_NUMBERS` | — | Fallback de allowlist si la tabla `vendedores` está vacía |
+| `N8N_SHARED_SECRET` | FASE B | Header de auth entre n8n y backend |
+| `PORT` | — | Puerto HTTP (Railway lo asigna) |
+| `META_*` | n8n | Credenciales Meta Cloud API (van en n8n, no en backend) |
 
 ## Base de datos
 
-Aplicar las migraciones de `sql/` **en orden** desde Supabase SQL Editor. Ver `sql/README.md` para detalles.
+Migraciones idempotentes en `sql/`. Aplicar **en orden** desde Supabase SQL Editor.
+Ver `sql/README.md` para detalles.
 
 Tablas principales:
-- **`products`** — catálogo de lubricantes
-- **`vehicle_guide`** — guía de qué lubricante usar para cada vehículo
-- **`vendedores`** — allowlist + categorías por vendedor
-- **`clientes`** — clientes identificados por RUC
-- **`pedidos`** + **`pedido_items`** — pedidos vinculados a clientes
-- **`sales`** — ventas anónimas (de `/vender`)
-
-## Deploy en Railway
-
-Ver instrucciones detalladas más abajo. Resumen:
-
-1. Conectar este repo a Railway
-2. Configurar variables de entorno
-3. Crear un **Volume** con mount path `/app/auth_info` (para persistir la sesión de WhatsApp)
-4. Deploy → ver los logs para el pairing code
-5. Ingresar el código en WhatsApp en el teléfono cuyo número está en `PHONE_NUMBER`
-
-### Variables en Railway
-
-Mismas que en local (`.env`), excepto que `--env-file=.env` no se usa en producción (`npm start` lee directo de `process.env`).
-
-| Variable | Valor |
-|----------|-------|
-| `SUPABASE_URL` | URL de Supabase |
-| `SUPABASE_SERVICE_KEY` | Service role key |
-| `BOT_PREFIX` | `/` (recomendado) |
-| `PHONE_NUMBER` | Solo para el primer auth |
-
-### Vinculación
-
-Los logs muestran cada 90 segundos un código nuevo hasta que vincules:
-
-```
-══════════════════════════════
-  PAIRING CODE: ABCD1234
-  Generado: 14:32:10 · Se renueva: 14:33:40
-
-  Para vincular 595XXXXXXXXX:
-  1. Abrí WhatsApp en ese teléfono
-  2. Configuración → Dispositivos vinculados
-  3. Vincular con número de teléfono
-  4. Ingresá el código de 8 caracteres
-
-  💡 Si tardás, esperá al próximo código (cada 90s).
-══════════════════════════════
-```
-
-Cuando los logs muestren `✅ Bot conectado a WhatsApp`, está operativo y la sesión queda guardada en el volumen — no necesitás repetir este paso en futuros deploys.
-
-## Panel admin
-
-La gestión de vendedores, clientes, vehicle_guide, productos y la consulta de pedidos se hace desde el panel web en [cgs-paraguay.netlify.app/admin.html](https://cgs-paraguay.netlify.app/admin.html). El código vive en el repo `cgs-landing`. Ver `docs/ADMIN_PANEL.md` allí.
+- `products` — catálogo
+- `vehicle_guide` — recomendaciones por vehículo
+- `vendedores` — allowlist + asignación de categorías
+- `clientes` — clientes con RUC
+- `pedidos` + `pedido_items` — pedidos con cliente identificado
+- `sales` — *(legacy — sin uso desde la consolidación en /pedido)*
 
 ## Estructura del código
 
 ```
 cgs-bot/
-├── index.js                  # Bootstrap + WhatsApp connection + parseIntent
-├── commands.js               # Router de comandos
+├── index.js                    # Entry point (stub — se reescribe en FASE B)
+├── commands.js                 # Router de comandos
 ├── lib/
-│   ├── supabase.js          # Cliente singleton
-│   ├── session.js           # Sesiones en memoria + cache de allowlist
-│   ├── format.js            # Templates de mensajes
-│   ├── search.js            # Búsqueda fuzzy de productos y vehículos
-│   └── pedidos.js           # Lógica de clientes y pedidos
-├── handlers/                 # Un archivo por dominio
+│   ├── supabase.js            # Cliente singleton
+│   ├── session.js             # Sesiones in-memory + cache de allowlist
+│   ├── format.js              # Templates de mensaje
+│   ├── search.js              # Wrappers de RPCs Supabase
+│   └── pedidos.js             # Lógica de clientes + pedidos
+├── handlers/
 │   ├── buscar.js
 │   ├── guia.js
 │   ├── pedido.js
 │   └── mispedidos.js
-├── sql/                      # Migraciones idempotentes (numeradas)
+├── sql/                        # Migraciones idempotentes
 └── docs/
-    ├── conversational-contract.md   # Diseño de UX conversacional v3.1 (FASE 1)
-    └── manual/                       # Manual de uso para vendedores y jefe
-        ├── manual-cgs-bot.html
-        └── generate-pdf.js
+    ├── RETOMAR.md             # Plan de migración Baileys → Cloud API
+    ├── USER_STORIES.md        # Stories con status MVD/Backend/Descartada
+    ├── DEMO_STORIES.md        # 7 historias del Mínimo Viable de Demo
+    ├── PILOTO_BACKLOG.md      # Features post-demo
+    ├── manual/                # Manual de uso (HTML + PDF)
+    ├── propuesta/             # Propuesta ejecutiva (HTML + PDF)
+    └── _archive/              # Documentación histórica de Baileys
 ```
 
-## Generar el manual de uso (PDF)
+## Documentación clave
+
+- **`docs/RETOMAR.md`** — punto de partida para retomar el proyecto
+- **`docs/USER_STORIES.md`** — qué funciones existen y con qué prioridad
+- **`docs/DEMO_STORIES.md`** — qué se va a mostrar al jefe (20 min)
+- **`docs/PILOTO_BACKLOG.md`** — qué viene después si se aprueba
+- **`docs/conversational-contract.md`** — diseño UX conversacional (válido en su mayor parte para Cloud API)
+
+## Generar materiales
 
 ```bash
-npm run manual:pdf
+npm run manual:pdf       # PDF del manual para vendedores
+npm run propuesta:pdf    # PDF de propuesta para el jefe
 ```
 
-Usa Chrome/Edge headless para imprimir el HTML a PDF. Sin dependencias npm adicionales.
+## Histórico
+
+La arquitectura previa basada en Baileys + Railway quedó deprecada el
+2026-05-22 después del segundo ban de WhatsApp sin completar vinculación.
+Ver `docs/_archive/` para documentación de esa era.
+
+## Repositorios relacionados
+
+- **Landing pública + panel admin**: [`cgs-landing`](https://github.com/gaperaltadev/cgs) (Netlify)
+- Comparten DB Supabase
