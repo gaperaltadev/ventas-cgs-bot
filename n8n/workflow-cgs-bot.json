@@ -1,0 +1,197 @@
+{
+  "name": "CGS Bot — Meta WhatsApp Cloud API",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "cgs-bot",
+        "responseMode": "onReceived",
+        "responseData": "noData",
+        "options": {}
+      },
+      "id": "a1b2c3d4-1111-1111-1111-111111111111",
+      "name": "Webhook (Meta)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        0
+      ],
+      "webhookId": "cgs-bot-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Meta envía MUCHOS tipos de eventos: messages, statuses, reactions, etc.\n// Solo nos interesan mensajes de TEXTO entrantes. El resto se descarta.\n\nconst body = $input.first().json.body;\nconst change = body?.entry?.[0]?.changes?.[0]?.value;\nconst message = change?.messages?.[0];\n\n// No es un mensaje (ej: status de entrega) → terminar flujo silenciosamente\nif (!message) {\n  return [];\n}\n\n// Por ahora solo texto. Imágenes/audios/botones quedan para el backlog.\nif (message.type !== 'text') {\n  return [];\n}\n\nreturn [{\n  json: {\n    wa_phone: message.from,\n    text: message.text.body,\n    message_id: message.id\n  }\n}];"
+      },
+      "id": "a1b2c3d4-2222-2222-2222-222222222222",
+      "name": "Extraer mensaje",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -180,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ventas-cgs-bot-production.up.railway.app/webhook",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-N8N-Secret",
+              "value": "REPLACE_WITH_N8N_SHARED_SECRET"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"wa_phone\": \"{{ $json.wa_phone }}\",\n  \"text\": \"{{ $json.text }}\"\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "a1b2c3d4-3333-3333-3333-333333333333",
+      "name": "Backend → procesar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        40,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "filter-empty-text",
+              "leftValue": "={{ $json.text }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-4444-4444-4444-444444444444",
+      "name": "¿Hay respuesta?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        260,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v23.0/REPLACE_WITH_META_PHONE_NUMBER_ID/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer REPLACE_WITH_META_ACCESS_TOKEN"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $('Extraer mensaje').first().json.wa_phone }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": \"{{ $json.text }}\",\n    \"preview_url\": false\n  }\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "a1b2c3d4-5555-5555-5555-555555555555",
+      "name": "Meta → enviar respuesta",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        -100
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook (Meta)": {
+      "main": [
+        [
+          {
+            "node": "Extraer mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer mensaje": {
+      "main": [
+        [
+          {
+            "node": "Backend → procesar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Backend → procesar": {
+      "main": [
+        [
+          {
+            "node": "¿Hay respuesta?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Hay respuesta?": {
+      "main": [
+        [
+          {
+            "node": "Meta → enviar respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "versionId": "1",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [
+    {
+      "createdAt": "2026-05-23T00:00:00.000Z",
+      "updatedAt": "2026-05-23T00:00:00.000Z",
+      "id": "cgs-bot",
+      "name": "cgs-bot"
+    }
+  ]
+}
