@@ -62,8 +62,8 @@ async function fetchProdNames(items) {
 // ═══════════════════════════════════════════════════════════════════════════
 // Entry point: /pedido [args]
 // ═══════════════════════════════════════════════════════════════════════════
-export async function handlePedido(args, jid) {
-  const vendedorTelefono = jid.split('@')[0];
+export async function handlePedido(args, waPhone) {
+  const vendedorTelefono = waPhone;
 
   // /pedido sin args → flujo guiado paso 1
   if (!args.length) {
@@ -109,8 +109,8 @@ export async function handlePedido(args, jid) {
 // FlowStep: pedido_esperando_cliente
 // El usuario respondió con RUC o texto. Misma lógica que /pedido <arg>.
 // ═══════════════════════════════════════════════════════════════════════════
-export async function handlePedidoBuscarCliente(args, session, jid) {
-  return handlePedido(args, jid);
+export async function handlePedidoBuscarCliente(args, session, waPhone) {
+  return handlePedido(args, waPhone);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -137,8 +137,8 @@ function mostrarSeleccionClientes(matches, itemsRaw = '') {
 // FlowStep: pedido_alta_cliente
 // El usuario escribió el nombre del cliente nuevo.
 // ═══════════════════════════════════════════════════════════════════════════
-export async function handlePedidoAltaCliente(args, session, jid) {
-  const vendedorTelefono = jid.split('@')[0];
+export async function handlePedidoAltaCliente(args, session, waPhone) {
+  const vendedorTelefono = waPhone;
   const razonSocial = args.join(' ').trim();
 
   if (razonSocial.length < 3) {
@@ -173,8 +173,8 @@ export async function handlePedidoAltaCliente(args, session, jid) {
 // FlowStep: pedido_esperando_items
 // Cliente confirmado, el usuario manda los items "ID cant, ID cant".
 // ═══════════════════════════════════════════════════════════════════════════
-export async function handlePedidoItems(args, session, jid) {
-  const vendedorTelefono = jid.split('@')[0];
+export async function handlePedidoItems(args, session, waPhone) {
+  const vendedorTelefono = waPhone;
   const itemsRaw = args.join(' ');
   const cliente = session.pedidoDraft?.cliente;
 
@@ -189,7 +189,7 @@ export async function handlePedidoItems(args, session, jid) {
 // FlowStep: pedido_confirmando
 // El usuario respondió si/no a la confirmación.
 // ═══════════════════════════════════════════════════════════════════════════
-export async function handlePedidoConfirmar(args, session, jid) {
+export async function handlePedidoConfirmar(args, session, waPhone) {
   const respuesta = (args[0] || '').toLowerCase();
   const draft = session.pedidoDraft;
 
@@ -202,7 +202,7 @@ export async function handlePedidoConfirmar(args, session, jid) {
   }
 
   // Confirmar → crear el pedido
-  const vendedorTelefono = jid.split('@')[0];
+  const vendedorTelefono = waPhone;
   const res = await crearPedido({
     clienteRuc: draft.cliente.ruc,
     vendedorTelefono,
@@ -230,14 +230,14 @@ export async function handlePedidoConfirmar(args, session, jid) {
 // ═══════════════════════════════════════════════════════════════════════════
 // Helper: __select__ delegado a /pedido cuando lastAction='pedido'
 // ═══════════════════════════════════════════════════════════════════════════
-export async function handleSelectCliente(idx, session, jid) {
+export async function handleSelectCliente(idx, session, waPhone) {
   const cliente = (session.lastResults || [])[idx];
   if (!cliente) {
     return `Ese número no está en la lista.\n👉 Probá de nuevo.`;
   }
 
   const itemsRaw = session.pedidoDraft?.itemsRaw || '';
-  const vendedorTelefono = jid.split('@')[0];
+  const vendedorTelefono = waPhone;
   return await procesarConCliente(cliente, itemsRaw, vendedorTelefono);
 }
 

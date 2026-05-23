@@ -28,7 +28,11 @@ INSERT INTO vendedores (telefono, nombre, categorias, ciudades, activo) VALUES
 ON CONFLICT (telefono) DO NOTHING;
 
 -- ─── Clientes ──────────────────────────────────────────────────────────────
+-- IMPORTANTE: el primer cliente (000000000) es el "consumidor final" usado
+-- en ventas de mostrador donde no hay RUC. Permite consolidar TODO registro
+-- de venta en /pedido (decisión de MVD — descartamos /vender anónimo).
 INSERT INTO clientes (ruc, razon_social, ciudad, contacto, telefono, notas, created_by) VALUES
+  ('000000000', 'CONSUMIDOR FINAL',                'Asunción',          NULL,             NULL,         'Cliente genérico para ventas de mostrador sin RUC. NO editar/borrar.', '595981111111'),
   ('800123451', 'AUTOREPUESTOS SAN LORENZO SRL',  'San Lorenzo',       'Juan Pérez',     '021 588000', 'Cliente recurrente — pasa los martes',         '595981111111'),
   ('800234562', 'LUBRICENTRO EL ROBLE',            'Asunción',          'María Acuña',    '021 444000', 'Compra ELAION + filtros',                       '595981111111'),
   ('800345673', 'TRANSPORTES ASUNCIÓN NORTE SA',   'Mariano R. Alonso', 'Carlos Vera',    '021 776000', 'Flota de 12 camiones diesel — EXTRAVIDA cada 60 días', '595982222222'),

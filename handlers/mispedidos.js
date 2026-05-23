@@ -1,8 +1,7 @@
 import { listarPedidos } from '../lib/pedidos.js';
 
-export async function handleMisPedidos(args, jid) {
-  const vendedorTelefono = jid.split('@')[0];
-  const { items, error } = await listarPedidos(vendedorTelefono, { limit: 10 });
+export async function handleMisPedidos(args, waPhone) {
+  const { items, error } = await listarPedidos(waPhone, { limit: 10 });
 
   if (error) return 'Error al obtener tus pedidos. Intentá de nuevo en un momento.';
   if (!items.length) {

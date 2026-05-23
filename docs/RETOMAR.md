@@ -1,20 +1,33 @@
 # Retomar — punto de partida
 
-Última actualización: 2026-05-23 (post FASE A — barrido completado).
+Última actualización: 2026-05-23 (post FASE B — backend Express operativo).
 
 ## ✅ FASE A — COMPLETADA
 
-- Stories re-priorizadas con framework Valor × Esfuerzo × Riesgo (docs/USER_STORIES.md, docs/DEMO_STORIES.md, docs/PILOTO_BACKLOG.md)
-- Borrados: `lib/auth-server.js`, `lib/diagnostics.js`, `lib/sender.js`, `nodemon.json`, `.railwayignore`, `supabase_sales.sql`, `auth_info/`
-- `package.json` limpio: 1 dependencia (`@supabase/supabase-js`). Antes: 4 con 134 transitivas. Ahora: 10 transitivas totales.
-- `index.js` reducido a stub claro con instrucciones para FASE B
-- `.env.example` actualizado con placeholders para Meta + n8n
-- Docs Baileys-era archivados en `docs/_archive/`
-- README actualizado con la nueva arquitectura
+- Stories re-priorizadas (docs/USER_STORIES.md, docs/DEMO_STORIES.md, docs/PILOTO_BACKLOG.md)
+- Borrados: archivos Baileys-only + auth_info + docs obsoletos archivados
+- `package.json` limpio: 1 dependencia (`@supabase/supabase-js`)
+- `index.js` stub + `.env.example` actualizado + README rehecho
 
-## 🔜 FASE B — Próxima sesión
+## ✅ FASE B — COMPLETADA
 
-**Reescribir el backend como Express server con webhook receiver.**
+- `commands.js` limpio: de 586 a 272 líneas. Eliminados `cmdVenta`, `cmdVentaFlujo`, `cmdVentaCantidad`, `cmdMultiVenta`, `cmdDestacados`. Imports consolidados desde `lib/format.js`.
+- `parseIntent` extraído a `lib/parser.js` (autónomo, testeable, importable).
+- `lib/session.js` adaptado: API moderna con `getSession/setSession/clearSession`, key `wa_phone` en lugar de `jid`.
+- Handlers actualizados: parámetro `jid` renombrado a `waPhone`, eliminado `jid.split('@')[0]`.
+- `index.js` reescrito como Express server con endpoints:
+  - `POST /webhook` — recibe `{ wa_phone, text }` desde n8n, autenticado con header `X-N8N-Secret`
+  - `GET /health` — healthcheck público para Railway
+  - `GET /` — info del servicio
+- Express 5 instalado como única dep nueva.
+- Seed `seed-demo.sql` actualizado: cliente `CONSUMIDOR FINAL` (RUC `000000000`) para reemplazar `/vender` con `/pedido 000000000 [items]`.
+- Smoke test local OK: arranque, health, root, webhook procesando `/ayuda` correctamente.
+
+**Estado del backend**: listo para recibir webhooks de n8n. Sin probar end-to-end con Meta todavía (depende de FASE C + D).
+
+## 🔜 FASE C — Próxima sesión
+
+**Configurar n8n self-hosted en Railway como pasarela Meta ↔ backend.**
 
 
 
