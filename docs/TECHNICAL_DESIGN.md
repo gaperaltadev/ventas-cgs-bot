@@ -1,3 +1,7 @@
+> ⚠️ **SUPERSEDIDO** — El Context Blueprint canónico está en
+> `projects/ARCHITECTURE_AND_CONTEXT.md`. Este archivo conserva detalles
+> de interfaz conversacional, parser y catálogo de errores que complementan el blueprint.
+
 # Diseño Técnico — Bot WhatsApp CGS Paraguay
 **Autor:** Santiago (@architect) — Tech Lead
 **Fecha:** 2026-05-20 | **Actualizado:** 2026-05-25
