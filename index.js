@@ -87,22 +87,26 @@ app.post('/webhook', requireSecret, async (req, res) => {
     });
   }
 
+  // Mensajes humanos para casos edge — NUNCA devolver null o 204.
+  // Si el bot recibió un mensaje, debe responder algo. El silencio es mala UX.
+  const FALLBACK_NO_COMMAND = 'No entendí tu mensaje. 🤔\n\nEscribí */ayuda* para ver lo que puedo hacer.';
+  const FALLBACK_ERROR = 'Hubo un error procesando tu mensaje. Intentá de nuevo en un momento.';
+
   // Sesión actual
   const session = getSession(wa_phone);
 
-  // Requerir prefijo para iniciar interacción (excepto si hay flujo activo)
-  // 204 No Content = "recibido OK, no hay respuesta para enviar".
-  // n8n maneja 204 sin parsear body → más limpio que devolver text: null.
+  // Si hay flujo activo, el texto se procesa tal cual (sin requerir prefijo).
+  // Si NO hay flujo, el texto debe empezar con el prefijo o devolvemos fallback.
   const hasActiveFlow = !!(session.flowStep || session.lastResults?.length);
   if (!hasActiveFlow && !text.startsWith(PREFIX)) {
-    return res.status(204).end();
+    return res.json({ text: FALLBACK_NO_COMMAND });
   }
 
   const cleanText = text.startsWith(PREFIX) ? text.slice(PREFIX.length).trim() : text;
-  if (!cleanText) return res.status(204).end();
+  if (!cleanText) return res.json({ text: FALLBACK_NO_COMMAND });
 
   const { command, args } = parseIntent(cleanText, session);
-  if (!command) return res.status(204).end();
+  if (!command) return res.json({ text: FALLBACK_NO_COMMAND });
 
   console.log(`[${new Date().toLocaleTimeString('es-PY')}] ${wa_phone} → ${cleanText} → ${command}`);
 
@@ -122,19 +126,21 @@ app.post('/webhook', requireSecret, async (req, res) => {
     result = await handleCommand(command, args, supabase, session, wa_phone);
   } catch (err) {
     console.error(`[handleCommand] error en ${command}:`, err);
-    return res.json({ text: 'Hubo un error procesando tu mensaje. Intentá de nuevo en un momento.' });
+    return res.json({ text: FALLBACK_ERROR });
   }
 
-  if (!result) return res.status(204).end();
+  // Si el handler no devolvió nada, fallback (no debería pasar pero por seguridad)
+  if (!result) return res.json({ text: FALLBACK_NO_COMMAND });
 
   // Guardar estado si el handler devolvió uno
   if (result?._session) {
     setSession(wa_phone, result._session);
-    return res.json({ text: result.text });
+    return res.json({ text: result.text || FALLBACK_NO_COMMAND });
   }
 
   // result puede ser string directo o { text }
-  res.json({ text: typeof result === 'string' ? result : result.text });
+  const responseText = typeof result === 'string' ? result : result.text;
+  res.json({ text: responseText || FALLBACK_NO_COMMAND });
 });
 
 // ─── Shutdown limpio ────────────────────────────────────────────────────────
