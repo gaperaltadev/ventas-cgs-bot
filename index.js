@@ -13,11 +13,20 @@
 // Para detalle de comandos: docs/USER_STORIES.md
 // ════════════════════════════════════════════════════════════════════════════
 
+import * as Sentry from '@sentry/node';
 import express from 'express';
 import { supabase } from './lib/supabase.js';
 import { parseIntent } from './lib/parser.js';
 import { handleCommand } from './commands.js';
 import { getSession, setSession, clearSession, isAllowed } from './lib/session.js';
+
+// ─── Sentry ─────────────────────────────────────────────────────────────────
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  environment: process.env.RAILWAY_ENVIRONMENT_NAME || 'development',
+  tracesSampleRate: 0,   // sin performance tracing — solo errores
+  enabled: !!process.env.SENTRY_DSN,
+});
 
 // ─── Validación de entorno ──────────────────────────────────────────────────
 const REQUIRED = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY'];
@@ -64,6 +73,10 @@ async function sendToMeta(waPhone, text) {
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     console.error('[meta] error al enviar mensaje:', err);
+    Sentry.captureMessage(`Meta API error: ${res.status}`, {
+      level: 'error',
+      extra: { waPhone, status: res.status, response: err }
+    });
   }
 }
 
@@ -156,6 +169,9 @@ app.post('/webhook', requireSecret, async (req, res) => {
     result = await handleCommand(command, args, supabase, session, wa_phone);
   } catch (err) {
     console.error(`[handleCommand] error en ${command}:`, err);
+    Sentry.captureException(err, {
+      extra: { command, args, wa_phone, session }
+    });
     await sendToMeta(wa_phone, FALLBACK_ERROR);
     return res.json({ ok: true });
   }

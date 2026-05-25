@@ -19,6 +19,7 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@sentry/node": "^10.53.1",
     "@supabase/supabase-js": "^2.106.1",
     "express": "^5.2.1"
   }

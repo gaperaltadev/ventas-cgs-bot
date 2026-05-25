@@ -11,6 +11,7 @@
 //   - Multi-venta              → cubierto por items múltiples en /pedido
 // ════════════════════════════════════════════════════════════════════════════
 
+import * as Sentry from '@sentry/node';
 import { handleBuscar } from './handlers/buscar.js';
 import { handleGuia } from './handlers/guia.js';
 import {
@@ -83,7 +84,11 @@ async function cmdCatalogo(supabase) {
     .from('products')
     .select('id, name, category')
     .order('sort_order', { ascending: true });
-  if (error) return ERR.DB('obtener el catálogo');
+  if (error) {
+    console.error('[supabase] cmdCatalogo:', error.message, error.code);
+    Sentry.captureException(error, { extra: { cmd: 'catalogo' } });
+    return ERR.DB('obtener el catálogo');
+  }
   if (!data.length) return 'El catálogo está vacío. Contactá al administrador.';
 
   const grouped = {};
@@ -108,7 +113,10 @@ async function cmdProducto(args, supabase) {
   if (!isNaN(num) && args.length === 1) {
     const { data, error } = await supabase
       .from('products').select('*').eq('id', num).single();
-    if (error || !data) return ERR.ID_NO_EXISTE(num);
+    if (error || !data) {
+      if (error) console.error('[supabase] cmdProducto:', error.message, error.code);
+      return ERR.ID_NO_EXISTE(num);
+    }
     return fichaProducto(data);
   }
 
