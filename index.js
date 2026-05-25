@@ -91,18 +91,18 @@ app.post('/webhook', requireSecret, async (req, res) => {
   const session = getSession(wa_phone);
 
   // Requerir prefijo para iniciar interacción (excepto si hay flujo activo)
+  // 204 No Content = "recibido OK, no hay respuesta para enviar".
+  // n8n maneja 204 sin parsear body → más limpio que devolver text: null.
   const hasActiveFlow = !!(session.flowStep || session.lastResults?.length);
   if (!hasActiveFlow && !text.startsWith(PREFIX)) {
-    // Mensaje libre sin prefijo y sin flujo → no responder (no spamear al usuario)
-    return res.json({ text: null });
+    return res.status(204).end();
   }
 
   const cleanText = text.startsWith(PREFIX) ? text.slice(PREFIX.length).trim() : text;
-  if (!cleanText) return res.json({ text: null });
+  if (!cleanText) return res.status(204).end();
 
-  // Parsear intent
   const { command, args } = parseIntent(cleanText, session);
-  if (!command) return res.json({ text: null });
+  if (!command) return res.status(204).end();
 
   console.log(`[${new Date().toLocaleTimeString('es-PY')}] ${wa_phone} → ${cleanText} → ${command}`);
 
@@ -125,7 +125,7 @@ app.post('/webhook', requireSecret, async (req, res) => {
     return res.json({ text: 'Hubo un error procesando tu mensaje. Intentá de nuevo en un momento.' });
   }
 
-  if (!result) return res.json({ text: null });
+  if (!result) return res.status(204).end();
 
   // Guardar estado si el handler devolvió uno
   if (result?._session) {
