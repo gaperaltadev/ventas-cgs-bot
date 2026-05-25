@@ -49,36 +49,6 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', uptime: process.uptime() });
 });
 
-// ─── Debug Meta credentials (TEMPORAL — remover en producción) ───────────────
-app.get('/debug-meta', async (req, res) => {
-  const phoneNumberId = process.env.META_PHONE_NUMBER_ID;
-  const accessToken   = process.env.META_ACCESS_TOKEN;
-
-  const info = {
-    META_PHONE_NUMBER_ID: phoneNumberId
-      ? { length: phoneNumberId.length, preview: `${phoneNumberId.slice(0, 4)}...${phoneNumberId.slice(-4)}`, startsWithPlus: phoneNumberId.startsWith('+'), isNumeric: /^\d+$/.test(phoneNumberId) }
-      : 'NO CONFIGURADO',
-    META_ACCESS_TOKEN: accessToken
-      ? { length: accessToken.length, preview: `${accessToken.slice(0, 8)}...${accessToken.slice(-4)}`, hasSpaces: accessToken !== accessToken.trim() }
-      : 'NO CONFIGURADO'
-  };
-
-  // Llamada real a Meta para ver la respuesta exacta
-  let metaTest = null;
-  if (phoneNumberId && accessToken) {
-    try {
-      const r = await fetch(
-        `https://graph.facebook.com/v23.0/${phoneNumberId}?fields=id,display_phone_number,verified_name`,
-        { headers: { 'Authorization': `Bearer ${accessToken}` } }
-      );
-      metaTest = { status: r.status, body: await r.json().catch(() => ({})) };
-    } catch (e) {
-      metaTest = { error: e.message };
-    }
-  }
-
-  res.json({ vars: info, metaTest });
-});
 
 // Info del servicio
 app.get('/', (req, res) => {
