@@ -25,7 +25,12 @@ Sentry.init({
 });
 
 // ─── Validación de entorno ──────────────────────────────────────────────────
-const REQUIRED = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY'];
+const REQUIRED = [
+  'SUPABASE_URL',
+  'SUPABASE_SERVICE_KEY',
+  'META_PHONE_NUMBER_ID',
+  'META_ACCESS_TOKEN'
+];
 const missing = REQUIRED.filter(k => !process.env[k]);
 if (missing.length) {
   console.error('❌ Faltan variables de entorno obligatorias:', missing.join(', '));
