@@ -1,7 +1,79 @@
 # Diseño Técnico — Bot WhatsApp CGS Paraguay
 **Autor:** Santiago (@architect) — Tech Lead
-**Fecha:** 2026-05-20
-**Token:** `[DESIGN-APPROVED] @architect — cgs-bot v2 — 2026-05-20`
+**Fecha:** 2026-05-20 | **Actualizado:** 2026-05-25
+**Token:** `[DESIGN-APPROVED] @architect — cgs-bot v3 — 2026-05-25`
+
+---
+
+## 0. Arquitectura de Integración (FASE 3 — Async Queue)
+
+> **Cambio desde v2:** el flujo dejó de ser síncrono. Ya no existe un `POST /webhook`
+> que n8n llama y espera respuesta. Ahora n8n solo inserta en una cola y muere.
+> El worker de Express consume esa cola de forma independiente.
+
+### Diagrama de flujo
+
+```
+WhatsApp / Meta
+      │
+      │  POST webhook (evento entrante)
+      ▼
+    n8n
+      │  1. Responde 200 OK a Meta de inmediato (< 50ms)
+      │  2. Inserta en bot_queue (Supabase)
+      │  3. Flujo de n8n termina
+      ▼
+  Supabase
+  bot_queue
+      │  status='pendiente'
+      │
+      │  polling cada 2s (setInterval)
+      ▼
+  Express Worker (lib/worker.js)
+      │  1. SELECT más antiguo WHERE status='pendiente'
+      │  2. UPDATE status='procesando'  ← lock optimista
+      │  3. parseIntent → handleCommand → sendToMeta
+      │  4. UPDATE status='completado' | 'error'
+      ▼
+  Meta Cloud API
+      │
+      ▼
+  WhatsApp del vendedor
+```
+
+### Por qué este diseño (ADR-06)
+
+| Problema (v2 síncrono) | Solución (v3 async) |
+|------------------------|---------------------|
+| Meta cancela webhooks > 20s | n8n responde < 50ms siempre |
+| Mensajes duplicados por retry de Meta | `message_id UNIQUE` en bot_queue — idempotente |
+| n8n acoplado al tiempo de proceso de IA | n8n solo inserta; desacoplado del backend |
+| Race condition si dos workers procesan el mismo mensaje | Lock optimista: UPDATE WHERE status='pendiente' |
+
+### Tabla bot_queue
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `id` | UUID | PK auto-generada |
+| `message_id` | TEXT UNIQUE | wamid de Meta — garantiza idempotencia |
+| `phone_number` | TEXT | Número del vendedor (solo dígitos) |
+| `message_body` | TEXT | Texto crudo del mensaje |
+| `status` | TEXT | `pendiente` → `procesando` → `completado` \| `error` |
+| `error_message` | TEXT | Detalle del error (primeros 500 chars) |
+| `created_at` | TIMESTAMPTZ | Timestamp de inserción (orden FIFO) |
+| `updated_at` | TIMESTAMPTZ | Última actualización de status |
+
+### Módulos del backend
+
+| Módulo | Responsabilidad |
+|--------|----------------|
+| `index.js` | Arranque: Express (healthchecks) + `startWorker()` |
+| `lib/worker.js` | Loop de polling + pipeline de procesamiento |
+| `lib/meta.js` | Cliente HTTP para Meta Cloud API (envío de respuestas) |
+| `lib/session.js` | Estado conversacional en memoria + cache de vendedores |
+| `lib/parser.js` | Pipeline de detección de intención (11 pasos) |
+| `commands.js` | Router de comandos → handlers |
+| `handlers/` | Lógica de negocio por dominio (buscar, pedido, guia...) |
 
 ---
 
@@ -232,4 +304,9 @@ registrarVenta(product, qty, supabase) → Promise<string>
 - **ADR-02:** Multi-venta no tiene flujo interactivo — ambigüedad falla con error claro
 - **ADR-03:** TTL de sesión con `setInterval`, no con campo `expiry`
 - **ADR-04:** `lastAction` explícito en sesión en vez de inferir por `pendingVenta`
-- **ADR-05:** Sin cambios en schema de Supabase
+- **ADR-05:** Sin cambios en schema de Supabase (supersedido por ADR-06)
+- **ADR-06:** Arquitectura async-queue — n8n inserta en `bot_queue`, Express consume vía polling.
+  Motivación: Meta cancela webhooks > 20s; mensajes duplicados por reintentos.
+  Consecuencia: se eliminó `POST /webhook`; nuevo schema `bot_queue` con `message_id UNIQUE`
+  para idempotencia. Lock optimista con `UPDATE WHERE status='pendiente'` para seguridad
+  ante workers paralelos futuros.

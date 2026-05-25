@@ -5,42 +5,46 @@ Asistente de WhatsApp para el equipo de ventas de **CGS Paraguay**
 catálogo, recomiendan productos por vehículo, y registran pedidos —
 directamente desde WhatsApp sin instalar nada.
 
-## Arquitectura
+## Arquitectura (async-queue — v3)
 
 ```
-Vendedor (WhatsApp del celular)
+Vendedor (WhatsApp)
         ↓
-Meta WhatsApp Cloud API (oficial)
-        ↓ webhook POST
-n8n self-hosted (Railway) — pasarela
-        ↓ HTTP POST con datos limpios
-Backend Node.js (Railway) — este repo
-        ↓ queries
-Supabase (Postgres + Auth)
+Meta WhatsApp Cloud API
+        ↓ webhook
+      n8n
+        ↓ 1. Responde 200 OK a Meta de inmediato
+        ↓ 2. Inserta en bot_queue (Supabase)
+        ✗   (flujo n8n termina acá)
+
+  Supabase bot_queue
+        ↑ polling cada 2s
+  Express Worker (este repo)
+        ↓ parseIntent → handleCommand → Meta API
+Meta Cloud API → responde al vendedor
+
+        ↕ queries
+Supabase (Postgres + Auth + bot_queue)
         ↑
    Panel Admin Web (Netlify — repo cgs-landing)
 ```
 
 **Stack**:
-- **Backend**: Node.js 20 ESM, Express (TBD en FASE B), Supabase JS
-- **Pasarela**: n8n self-hosted en Railway
+- **Backend**: Node.js 20 ESM, Express + worker async, Supabase JS
+- **Pasarela**: n8n self-hosted en Railway (solo inserta en cola — no llama al backend)
 - **WhatsApp**: Meta Cloud API oficial (no Baileys ni clientes no oficiales)
-- **DB**: Supabase (Postgres + RLS + Auth)
+- **DB**: Supabase (Postgres + RLS + Auth + tabla `bot_queue`)
 - **Hosting**: Railway (backend + n8n)
 
-## Estado actual del proyecto
+## Estado del proyecto
 
-El repo está en **transición**:
-
-- ✅ Schema de DB completo y aplicado en Supabase (`sql/`)
-- ✅ Lógica de negocio implementada (`handlers/`, `lib/`)
-- ✅ Cliente de Supabase listo (`lib/supabase.js`)
+- ✅ Schema de DB completo (`sql/`)
+- ✅ Lógica de negocio (`handlers/`, `lib/`)
+- ✅ Arquitectura async-queue implementada (`lib/worker.js`, `lib/meta.js`)
+- ✅ Tabla `bot_queue` definida (`sql/05-bot-queue.sql`)
 - ✅ User stories priorizadas (`docs/USER_STORIES.md`, `docs/DEMO_STORIES.md`)
-- ⏳ **Pendiente**: reescribir `index.js` como Express server con `POST /webhook` (FASE B)
-- ⏳ **Pendiente**: configurar n8n workflow Meta ↔ backend (FASE C)
-- ⏳ **Pendiente**: verificación Meta Business (FASE D — depende del cliente)
 
-Ver `docs/RETOMAR.md` para el plan completo.
+Ver `docs/TECHNICAL_DESIGN.md` para diseño completo y ADRs.
 
 ## Comandos del bot (target)
 
