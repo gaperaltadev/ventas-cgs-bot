@@ -6,8 +6,8 @@
 //   2. Meta envía webhook a n8n
 //   3. n8n parsea y llama POST /webhook acá con { wa_phone, text }
 //   4. Procesamos: parseIntent → handleCommand → respuesta
-//   5. Devolvemos { text } a n8n
-//   6. n8n llama Meta Send API para enviar al vendedor
+//   5. Backend llama Meta Send API directamente (n8n no toca el texto)
+//   6. Devolvemos { ok: true } a n8n
 //
 // Para detalle de la arquitectura: docs/RETOMAR.md
 // Para detalle de comandos: docs/USER_STORIES.md
@@ -35,6 +35,36 @@ const N8N_SECRET = process.env.N8N_SHARED_SECRET || '';
 if (!N8N_SECRET) {
   console.warn('⚠️  N8N_SHARED_SECRET no configurado. El endpoint /webhook está abierto.');
   console.warn('   Configurar antes de exponer en producción.');
+}
+
+// ─── Meta Send API ──────────────────────────────────────────────────────────
+async function sendToMeta(waPhone, text) {
+  const phoneNumberId = process.env.META_PHONE_NUMBER_ID;
+  const accessToken   = process.env.META_ACCESS_TOKEN;
+  if (!phoneNumberId || !accessToken) {
+    console.warn('[meta] META_PHONE_NUMBER_ID o META_ACCESS_TOKEN no configurados — respuesta no enviada');
+    return;
+  }
+  const res = await fetch(
+    `https://graph.facebook.com/v23.0/${phoneNumberId}/messages`,
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        to: waPhone,
+        type: 'text',
+        text: { body: text, preview_url: false }
+      })
+    }
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    console.error('[meta] error al enviar mensaje:', err);
+  }
 }
 
 // ─── App ────────────────────────────────────────────────────────────────────
@@ -82,9 +112,8 @@ app.post('/webhook', requireSecret, async (req, res) => {
   // Allowlist de vendedores
   if (!(await isAllowed(wa_phone))) {
     console.log(`[bloqueado] ${wa_phone} — no está en vendedores activos`);
-    return res.json({
-      text: 'Hola 👋 Este bot es de uso interno de CGS Paraguay. Si sos parte del equipo, pedile acceso al administrador.'
-    });
+    await sendToMeta(wa_phone, 'Hola 👋 Este bot es de uso interno de CGS Paraguay. Si sos parte del equipo, pedile acceso al administrador.');
+    return res.json({ ok: true });
   }
 
   // Mensajes humanos para casos edge — NUNCA devolver null o 204.
@@ -99,14 +128,15 @@ app.post('/webhook', requireSecret, async (req, res) => {
   // Si NO hay flujo, el texto debe empezar con el prefijo o devolvemos fallback.
   const hasActiveFlow = !!(session.flowStep || session.lastResults?.length);
   if (!hasActiveFlow && !text.startsWith(PREFIX)) {
-    return res.json({ text: FALLBACK_NO_COMMAND });
+    await sendToMeta(wa_phone, FALLBACK_NO_COMMAND);
+    return res.json({ ok: true });
   }
 
   const cleanText = text.startsWith(PREFIX) ? text.slice(PREFIX.length).trim() : text;
-  if (!cleanText) return res.json({ text: FALLBACK_NO_COMMAND });
+  if (!cleanText) { await sendToMeta(wa_phone, FALLBACK_NO_COMMAND); return res.json({ ok: true }); }
 
   const { command, args } = parseIntent(cleanText, session);
-  if (!command) return res.json({ text: FALLBACK_NO_COMMAND });
+  if (!command) { await sendToMeta(wa_phone, FALLBACK_NO_COMMAND); return res.json({ ok: true }); }
 
   console.log(`[${new Date().toLocaleTimeString('es-PY')}] ${wa_phone} → ${cleanText} → ${command}`);
 
@@ -126,21 +156,24 @@ app.post('/webhook', requireSecret, async (req, res) => {
     result = await handleCommand(command, args, supabase, session, wa_phone);
   } catch (err) {
     console.error(`[handleCommand] error en ${command}:`, err);
-    return res.json({ text: FALLBACK_ERROR });
+    await sendToMeta(wa_phone, FALLBACK_ERROR);
+    return res.json({ ok: true });
   }
 
   // Si el handler no devolvió nada, fallback (no debería pasar pero por seguridad)
-  if (!result) return res.json({ text: FALLBACK_NO_COMMAND });
+  if (!result) { await sendToMeta(wa_phone, FALLBACK_NO_COMMAND); return res.json({ ok: true }); }
 
   // Guardar estado si el handler devolvió uno
   if (result?._session) {
     setSession(wa_phone, result._session);
-    return res.json({ text: result.text || FALLBACK_NO_COMMAND });
+    await sendToMeta(wa_phone, result.text || FALLBACK_NO_COMMAND);
+    return res.json({ ok: true });
   }
 
   // result puede ser string directo o { text }
   const responseText = typeof result === 'string' ? result : result.text;
-  res.json({ text: responseText || FALLBACK_NO_COMMAND });
+  await sendToMeta(wa_phone, responseText || FALLBACK_NO_COMMAND);
+  res.json({ ok: true });
 });
 
 // ─── Shutdown limpio ────────────────────────────────────────────────────────
