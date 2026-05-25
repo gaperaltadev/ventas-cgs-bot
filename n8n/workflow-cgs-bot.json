@@ -4,96 +4,71 @@
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "cgs-bot",
-        "responseMode": "onReceived",
-        "responseData": "noData",
-        "options": {}
+        "path": "whatsapp",
+        "options": {
+          "responseCode": {
+            "values": {}
+          }
+        }
       },
-      "id": "a1b2c3d4-1111-1111-1111-111111111111",
+      "id": "8b3c3c69-035f-4aa4-87b0-1a4d9591ac5a",
       "name": "Webhook (Meta)",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        -400,
-        0
+        -880,
+        112
       ],
       "webhookId": "cgs-bot-webhook"
     },
     {
       "parameters": {
-        "jsCode": "// Meta envía MUCHOS tipos de eventos: messages, statuses, reactions, etc.\n// Solo nos interesan mensajes de TEXTO entrantes. El resto se descarta.\n\nconst body = $input.first().json.body;\nconst change = body?.entry?.[0]?.changes?.[0]?.value;\nconst message = change?.messages?.[0];\n\n// No es un mensaje (ej: status de entrega) → terminar flujo silenciosamente\nif (!message) {\n  return [];\n}\n\n// Por ahora solo texto. Imágenes/audios/botones quedan para el backlog.\nif (message.type !== 'text') {\n  return [];\n}\n\nreturn [{\n  json: {\n    wa_phone: message.from,\n    text: message.text.body,\n    message_id: message.id\n  }\n}];"
-      },
-      "id": "a1b2c3d4-2222-2222-2222-222222222222",
-      "name": "Extraer mensaje",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -180,
-        0
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://ventas-cgs-bot-production.up.railway.app/webhook",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "tableId": "bot_queue",
+        "fieldsUi": {
+          "fieldValues": [
             {
-              "name": "Content-Type",
-              "value": "application/json"
+              "fieldId": "message_id",
+              "fieldValue": "={{ $json[\"body\"][\"entry\"][\"0\"][\"changes\"][\"0\"][\"value\"][\"messages\"][\"0\"][\"id\"] }}"
             },
             {
-              "name": "X-N8N-Secret",
-              "value": "thismustbetopsecret"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "keypair",
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "wa_phone",
-              "value": "={{ $json.wa_phone }}"
+              "fieldId": "phone_number",
+              "fieldValue": "={{ $json[\"body\"][\"entry\"][\"0\"][\"changes\"][\"0\"][\"value\"][\"messages\"][\"0\"][\"from\"] }}"
             },
             {
-              "name": "text",
-              "value": "={{ $json.text }}"
+              "fieldId": "message_body",
+              "fieldValue": "={{ $json[\"body\"][\"entry\"][\"0\"][\"changes\"][\"0\"][\"value\"][\"messages\"][\"0\"][\"text\"][\"body\"] }}"
+            },
+            {
+              "fieldId": "customer_name",
+              "fieldValue": "={{ $json[\"body\"][\"entry\"][\"0\"][\"changes\"][\"0\"][\"value\"][\"contacts\"][\"0\"][\"profile\"][\"name\"] }}"
             }
           ]
-        },
-        "options": {
-          "timeout": 30000
         }
       },
-      "id": "a1b2c3d4-3333-3333-3333-333333333333",
-      "name": "Backend → procesar",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
       "position": [
-        40,
-        0
-      ]
+        -672,
+        112
+      ],
+      "id": "6ca30209-6118-4fc9-9399-0558a0b4f1d1",
+      "name": "Create a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "aW9IfF00rn70Sckb",
+          "name": "CGS"
+        }
+      },
+      "onError": "continueRegularOutput"
     }
   ],
+  "pinData": {},
   "connections": {
     "Webhook (Meta)": {
       "main": [
         [
           {
-            "node": "Extraer mensaje",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Extraer mensaje": {
-      "main": [
-        [
-          {
-            "node": "Backend → procesar",
+            "node": "Create a row",
             "type": "main",
             "index": 0
           }
@@ -101,19 +76,22 @@
       ]
     }
   },
+  "active": true,
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "binaryMode": "separate"
   },
-  "active": false,
-  "versionId": "2",
+  "versionId": "6301b172-2de1-46b4-ac8d-ab0d8f38ae7d",
   "meta": {
-    "templateCredsSetupCompleted": false
+    "templateCredsSetupCompleted": true,
+    "instanceId": "882805fac60109f8d92cae41644c0d10cda6c4564b77a1c6885b150fee729057"
   },
+  "id": "o0kGB960Kf16Q2rW",
   "tags": [
     {
-      "createdAt": "2026-05-23T00:00:00.000Z",
-      "updatedAt": "2026-05-25T00:00:00.000Z",
-      "id": "cgs-bot",
+      "updatedAt": "2026-05-23T12:03:49.940Z",
+      "createdAt": "2026-05-23T12:03:49.940Z",
+      "id": "iQNGddNiHJIQjbJM",
       "name": "cgs-bot"
     }
   ]
