@@ -32,6 +32,7 @@ import {
   buscarPresentaciones
 } from '../lib/pedidos.js';
 import { getExchangeRate, formatPrice, formatPyg } from '../lib/prices.js';
+import { getVendedor } from '../lib/session.js';
 
 // RUC fijo para ventas sin cliente identificado (insertado en SQL 09)
 const RUC_CF = '00000000-0';
@@ -67,9 +68,14 @@ function totalCarritoUsd(carrito) {
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PASO 1 — Entrada: /pedido
+// Valida que el número esté registrado como vendedor activo antes de iniciar.
 // ═══════════════════════════════════════════════════════════════════════════
 
 export async function handlePedido(args, waPhone) {
+  const vendedor = await getVendedor(waPhone);
+  if (!vendedor) {
+    return '⚠️ Tu número no está registrado como vendedor activo.\n\nContactá al administrador para habilitarte.';
+  }
   return textReply(
     '¿Para qué cliente? Escribí el nombre o RUC.\n' +
     '👉 Ej: *80012345-1* · *distribuidora lopez*',
