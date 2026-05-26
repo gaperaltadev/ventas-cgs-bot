@@ -1,0 +1,89 @@
+table_name,column_name,data_type,is_nullable
+bot_queue,id,bigint,NO
+bot_queue,message_id,text,NO
+bot_queue,phone_number,text,NO
+bot_queue,customer_name,text,YES
+bot_queue,message_body,text,YES
+bot_queue,status,text,YES
+bot_queue,created_at,timestamp with time zone,YES
+bot_queue,updated_at,timestamp with time zone,YES
+clientes,ruc,text,NO
+clientes,razon_social,text,NO
+clientes,ciudad,text,YES
+clientes,contacto,text,YES
+clientes,telefono,text,YES
+clientes,notas,text,YES
+clientes,search_terms,text,YES
+clientes,created_by,text,YES
+clientes,created_at,timestamp with time zone,YES
+clientes,updated_at,timestamp with time zone,YES
+pedido_items,id,bigint,NO
+pedido_items,pedido_id,bigint,NO
+pedido_items,product_id,integer,YES
+pedido_items,product_name,text,NO
+pedido_items,quantity,integer,NO
+pedido_items,unit_price,numeric,YES
+pedido_items,subtotal,numeric,YES
+pedidos,id,bigint,NO
+pedidos,cliente_ruc,text,NO
+pedidos,vendedor_telefono,text,NO
+pedidos,estado,text,NO
+pedidos,notas,text,YES
+pedidos,total_unidades,integer,YES
+pedidos,total_monto,numeric,YES
+pedidos,created_at,timestamp with time zone,YES
+pedidos,confirmed_at,timestamp with time zone,YES
+pedidos_resumen,id,bigint,YES
+pedidos_resumen,estado,text,YES
+pedidos_resumen,created_at,timestamp with time zone,YES
+pedidos_resumen,confirmed_at,timestamp with time zone,YES
+pedidos_resumen,cliente_ruc,text,YES
+pedidos_resumen,razon_social,text,YES
+pedidos_resumen,ciudad,text,YES
+pedidos_resumen,vendedor_telefono,text,YES
+pedidos_resumen,vendedor_nombre,text,YES
+pedidos_resumen,total_unidades,integer,YES
+pedidos_resumen,notas,text,YES
+pedidos_resumen,num_items,bigint,YES
+products,id,bigint,NO
+products,name,text,NO
+products,category,text,NO
+products,technology,text,NO
+products,description,text,YES
+products,specs,text,YES
+products,viscosity,text,YES
+products,presentations,ARRAY,YES
+products,applications,ARRAY,YES
+products,vehicle_type,text,YES
+products,image,text,YES
+products,featured,boolean,YES
+products,badge,text,YES
+products,sort_order,integer,YES
+products,created_at,timestamp with time zone,YES
+products,updated_at,timestamp with time zone,YES
+products,search_terms,text,YES
+sales,id,bigint,NO
+sales,product_id,integer,YES
+sales,product_name,text,NO
+sales,category,text,YES
+sales,quantity,integer,NO
+sales,registered_by,text,YES
+sales,created_at,timestamp with time zone,YES
+vehicle_guide,id,integer,NO
+vehicle_guide,brand,text,NO
+vehicle_guide,model,text,NO
+vehicle_guide,year_from,integer,YES
+vehicle_guide,year_to,integer,YES
+vehicle_guide,engine_type,text,YES
+vehicle_guide,recommended_product_id,integer,YES
+vehicle_guide,alternative_product_id,integer,YES
+vehicle_guide,notes,text,YES
+vehicle_guide,search_terms,text,YES
+vehicle_guide,created_at,timestamp with time zone,YES
+vendedores,telefono,text,NO
+vendedores,nombre,text,NO
+vendedores,categorias,ARRAY,NO
+vendedores,ciudades,ARRAY,YES
+vendedores,activo,boolean,NO
+vendedores,created_at,timestamp with time zone,YES
+vendedores,updated_at,timestamp with time zone,YES

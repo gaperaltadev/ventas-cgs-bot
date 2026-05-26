@@ -17,10 +17,19 @@ import { handleGuia } from './handlers/guia.js';
 import {
   handlePedido,
   handlePedidoBuscarCliente,
-  handlePedidoAltaCliente,
-  handlePedidoItems,
+  handlePedidoSelectCliente,
+  handlePedidoAltaRuc,
+  handlePedidoAltaNombre,
+  handlePedidoAltaConfirm,
+  handlePedidoAltaCancel,
+  handlePedidoConsumidorFinal,
   handlePedidoConfirmar,
-  handleSelectCliente
+  handlePedidoEsperandoItem,
+  handlePedidoSelectProducto,
+  handlePedidoSelectPresentacion,
+  handlePedidoEsperandoCantidad,
+  handlePedidoCartAdd,
+  handlePedidoCartDone
 } from './handlers/pedido.js';
 import { handleMisPedidos } from './handlers/mispedidos.js';
 import { CATEGORY_LABELS, CATEGORY_ALIASES, fichaProducto } from './lib/format.js';
@@ -48,9 +57,9 @@ export async function handleCommand(command, args, supabase, session = {}, waPho
     case '!buscar':    case '!b':   return handleBuscar(args);
     case '!guia':      case '!g':   return handleGuia(args);
 
-    // Pedidos (US-14, US-15)
-    case '!pedido':                   return handlePedido(args, waPhone);
-    case '!mispedidos':               return handleMisPedidos(args, waPhone);
+    // Pedidos
+    case '!pedido':                          return handlePedido(args, waPhone);
+    case '!mispedidos':                      return handleMisPedidos(args, waPhone);
 
     // Reportes
     case '!ventas':                   return cmdVentas(args, supabase);
@@ -61,14 +70,33 @@ export async function handleCommand(command, args, supabase, session = {}, waPho
     case '!salir':                    return cmdSalir(session);
 
     // Comandos internos disparados por el parser (no son visibles al usuario)
+
+    // Flujo de pedido — texto libre (parseIntent)
+    case '__pedido_buscar_cliente__':        return handlePedidoBuscarCliente(args, session, waPhone);
+    case '__pedido_alta_nombre__':           return handlePedidoAltaNombre(args, session, waPhone);
+    case '__pedido_esperando_item__':        return handlePedidoEsperandoItem(args, session, waPhone);
+    case '__pedido_esperando_cantidad__':    return handlePedidoEsperandoCantidad(args, session, waPhone);
+    case '__pedido_confirmar__':             return handlePedidoConfirmar(args, session, waPhone);
+
+    // Flujo de pedido — interactivos (parseInteractive)
+    case '__pedido_select_cliente__':        return handlePedidoSelectCliente(args[0], session, waPhone);
+    case '__pedido_alta_ruc__':              return handlePedidoAltaRuc(session, waPhone);
+    case '__pedido_alta_confirm__':          return handlePedidoAltaConfirm(session, waPhone);
+    case '__pedido_alta_cancel__':           return handlePedidoAltaCancel(session, waPhone);
+    case '__pedido_consumidor__':            return handlePedidoConsumidorFinal(session, waPhone);
+    case '__pedido_select_prod__':           return handlePedidoSelectProducto(args[0], session, waPhone);
+    case '__pedido_select_pres__':           return handlePedidoSelectPresentacion(args[0], session, waPhone);
+    case '__pedido_cart_add__':              return handlePedidoCartAdd(session, waPhone);
+    case '__pedido_cart_done__':             return handlePedidoCartDone(session, waPhone);
+
+    // Legacy (mantener por compatibilidad con sesiones viejas)
+    case '__pedido_alta_cliente__':          return handlePedidoAltaNombre(args, session, waPhone);
+    case '__pedido_items__':                 return handlePedidoEsperandoItem(args, session, waPhone);
     case '__select__':
-      // Selección numérica: delegar según lastAction
-      if (session.lastAction === 'pedido') return handleSelectCliente(args[0], session, waPhone);
+      if (session.lastAction === 'pedido')   return handlePedidoSelectCliente(
+        (session.lastResults?.[args[0]]?.ruc), session, waPhone
+      );
       return cmdSelect(args, session, supabase);
-    case '__pedido_buscar_cliente__': return handlePedidoBuscarCliente(args, session, waPhone);
-    case '__pedido_alta_cliente__':   return handlePedidoAltaCliente(args, session, waPhone);
-    case '__pedido_items__':          return handlePedidoItems(args, session, waPhone);
-    case '__pedido_confirmar__':      return handlePedidoConfirmar(args, session, waPhone);
 
     default: return null;
   }
