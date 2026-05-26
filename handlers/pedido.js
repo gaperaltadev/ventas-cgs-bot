@@ -33,6 +33,7 @@ import {
 } from '../lib/pedidos.js';
 import { getExchangeRate, formatPrice, formatPyg } from '../lib/prices.js';
 import { getVendedor } from '../lib/session.js';
+import { FLOW } from '../lib/constants.js';
 
 // RUC fijo para ventas sin cliente identificado (insertado en SQL 09)
 const RUC_CF = '00000000-0';
@@ -79,7 +80,7 @@ export async function handlePedido(args, waPhone) {
   return textReply(
     '¿Para qué cliente? Escribí el nombre o RUC.\n' +
     '👉 Ej: *80012345-1* · *distribuidora lopez*',
-    { flowStep: 'pedido_esperando_cliente', pedidoDraft: {} }
+    { flowStep: FLOW.PEDIDO_ESPERANDO_CLIENTE, pedidoDraft: {} }
   );
 }
 
@@ -93,7 +94,7 @@ export async function handlePedidoBuscarCliente(args, session, waPhone) {
   if (!args.length || !args[0]) {
     return textReply(
       '¿Para qué cliente? Escribí el nombre o RUC:',
-      { flowStep: 'pedido_esperando_cliente', pedidoDraft: {} }
+      { flowStep: FLOW.PEDIDO_ESPERANDO_CLIENTE, pedidoDraft: {} }
     );
   }
 
@@ -109,7 +110,7 @@ export async function handlePedidoBuscarCliente(args, session, waPhone) {
         { id: 'confirm_yes', title: 'Continuar ▶' },
         { id: 'confirm_no',  title: 'Buscar otro' }
       ],
-      { flowStep: 'pedido_cliente_confirmado', pedidoDraft: { cliente: c } }
+      { flowStep: FLOW.PEDIDO_CLIENTE_CONFIRMADO, pedidoDraft: { cliente: c } }
     );
   }
 
@@ -123,7 +124,7 @@ export async function handlePedidoBuscarCliente(args, session, waPhone) {
         { id: 'buscar_otro', title: '🔍 Buscar otro' }
       ],
       {
-        flowStep: 'pedido_ruc_no_encontrado',
+        flowStep: FLOW.PEDIDO_RUC_NO_ENCONTRADO,
         pedidoDraft: { rucNuevo: busqueda.rucProbable }
       }
     );
@@ -143,7 +144,7 @@ export async function handlePedidoBuscarCliente(args, session, waPhone) {
       'Encontré estos clientes:',
       'Elegir',
       [{ title: 'Clientes', rows }],
-      { flowStep: 'pedido_seleccionar_cliente', pedidoDraft: {} }
+      { flowStep: FLOW.PEDIDO_SELECCIONAR_CLIENTE, pedidoDraft: {} }
     );
   }
 
@@ -151,7 +152,7 @@ export async function handlePedidoBuscarCliente(args, session, waPhone) {
   return textReply(
     `No encontré ningún cliente con "*${termino}*".\n` +
     '👉 Probá con el RUC completo o con otro nombre.',
-    { flowStep: 'pedido_esperando_cliente', pedidoDraft: {} }
+    { flowStep: FLOW.PEDIDO_ESPERANDO_CLIENTE, pedidoDraft: {} }
   );
 }
 
@@ -166,7 +167,7 @@ export async function handlePedidoSelectCliente(ruc, session, waPhone) {
   if (!c) {
     return textReply(
       '⚠️ No pude encontrar ese cliente. Intentá buscar de nuevo:',
-      { flowStep: 'pedido_esperando_cliente', pedidoDraft: {} }
+      { flowStep: FLOW.PEDIDO_ESPERANDO_CLIENTE, pedidoDraft: {} }
     );
   }
   return buttonsReply(
@@ -175,7 +176,7 @@ export async function handlePedidoSelectCliente(ruc, session, waPhone) {
       { id: 'confirm_yes', title: 'Continuar ▶' },
       { id: 'confirm_no',  title: 'Buscar otro' }
     ],
-    { flowStep: 'pedido_cliente_confirmado', pedidoDraft: { cliente: c } }
+    { flowStep: FLOW.PEDIDO_CLIENTE_CONFIRMADO, pedidoDraft: { cliente: c } }
   );
 }
 
@@ -190,13 +191,13 @@ export async function handlePedidoAltaRuc(session, waPhone) {
     // El RUC ya está en el draft (viene del estado ruc_no_encontrado)
     return textReply(
       `Escribí el nombre o razón social del cliente:\n_(RUC: ${rucNuevo})_`,
-      { flowStep: 'pedido_alta_nombre', pedidoDraft: { rucNuevo } }
+      { flowStep: FLOW.PEDIDO_ALTA_NOMBRE, pedidoDraft: { rucNuevo } }
     );
   }
   // cli_new desde lista: no hay RUC previo → pedir RUC primero
   return textReply(
     'Escribí el *RUC* del nuevo cliente:',
-    { flowStep: 'pedido_esperando_cliente', pedidoDraft: {} }
+    { flowStep: FLOW.PEDIDO_ESPERANDO_CLIENTE, pedidoDraft: {} }
   );
 }
 
@@ -224,7 +225,7 @@ export async function handlePedidoAltaNombre(args, session, waPhone) {
       { id: 'alta_cancel',  title: '❌ Cancelar' }
     ],
     {
-      flowStep: 'pedido_alta_confirmando',
+      flowStep: FLOW.PEDIDO_ALTA_CONFIRMANDO,
       pedidoDraft: { rucNuevo, razonSocialNuevo: razonSocial }
     }
   );
@@ -253,7 +254,7 @@ export async function handlePedidoAltaConfirm(session, waPhone) {
   return textReply(
     `✅ *${c.razon_social}* dado de alta\n\n` +
     `¿Qué productos? Escribí nombre o ID.\n👉 Ej: *elaion 20w50* · *37*`,
-    { flowStep: 'pedido_esperando_item', pedidoDraft: { cliente: c, carrito: [] } }
+    { flowStep: FLOW.PEDIDO_ESPERANDO_ITEM, pedidoDraft: { cliente: c, carrito: [] } }
   );
 }
 
@@ -265,7 +266,7 @@ export async function handlePedidoAltaConfirm(session, waPhone) {
 export async function handlePedidoAltaCancel(session, waPhone) {
   return textReply(
     '¿Para qué cliente? Escribí el nombre o RUC:',
-    { flowStep: 'pedido_esperando_cliente', pedidoDraft: {} }
+    { flowStep: FLOW.PEDIDO_ESPERANDO_CLIENTE, pedidoDraft: {} }
   );
 }
 
@@ -280,7 +281,7 @@ export async function handlePedidoConsumidorFinal(session, waPhone) {
   return textReply(
     `✅ Vendiendo a *${cf.razon_social}*\n\n` +
     `¿Qué productos? Escribí nombre o ID.\n👉 Ej: *elaion 20w50* · *extravida* · *37*`,
-    { flowStep: 'pedido_esperando_item', pedidoDraft: { cliente: cf, carrito: [] } }
+    { flowStep: FLOW.PEDIDO_ESPERANDO_ITEM, pedidoDraft: { cliente: cf, carrito: [] } }
   );
 }
 
@@ -298,7 +299,7 @@ export async function handlePedidoConfirmar(args, session, waPhone) {
     if (!si) {
       return textReply(
         '¿Para qué cliente? Escribí el nombre o RUC:',
-        { flowStep: 'pedido_esperando_cliente', pedidoDraft: {} }
+        { flowStep: FLOW.PEDIDO_ESPERANDO_CLIENTE, pedidoDraft: {} }
       );
     }
     const cliente = session.pedidoDraft?.cliente;
@@ -306,7 +307,7 @@ export async function handlePedidoConfirmar(args, session, waPhone) {
     return textReply(
       `✅ Cliente: *${cliente.razon_social}*\n\n` +
       `¿Qué productos? Escribí nombre o ID.\n👉 Ej: *elaion 20w50* · *extravida* · *37*`,
-      { flowStep: 'pedido_esperando_item', pedidoDraft: { cliente, carrito: [] } }
+      { flowStep: FLOW.PEDIDO_ESPERANDO_ITEM, pedidoDraft: { cliente, carrito: [] } }
     );
   }
 
@@ -383,7 +384,7 @@ export async function handlePedidoEsperandoItem(args, session, waPhone) {
     if (!producto) {
       return textReply(
         `No existe el producto [${termino}].\n👉 Escribí */catalogo* para ver los IDs.`,
-        { flowStep: 'pedido_esperando_item', pedidoDraft: draft }
+        { flowStep: FLOW.PEDIDO_ESPERANDO_ITEM, pedidoDraft: draft }
       );
     }
     return mostrarPresentaciones(producto, draft, rate);
@@ -394,7 +395,7 @@ export async function handlePedidoEsperandoItem(args, session, waPhone) {
   if (!prods.length) {
     return textReply(
       `No encontré "*${termino}*".\n👉 Probá con otro nombre o con el ID del producto.`,
-      { flowStep: 'pedido_esperando_item', pedidoDraft: draft }
+      { flowStep: FLOW.PEDIDO_ESPERANDO_ITEM, pedidoDraft: draft }
     );
   }
 
@@ -413,7 +414,7 @@ export async function handlePedidoEsperandoItem(args, session, waPhone) {
     'Encontré varios productos — ¿cuál?',
     'Elegir',
     [{ title: 'Productos', rows }],
-    { flowStep: 'pedido_seleccionar_producto', pedidoDraft: draft }
+    { flowStep: FLOW.PEDIDO_SELECCIONAR_PRODUCTO, pedidoDraft: draft }
   );
 }
 
@@ -426,7 +427,7 @@ export async function handlePedidoSelectProducto(prodId, session, waPhone) {
   if (!producto) {
     return textReply(
       '⚠️ No encontré ese producto. Intentá de nuevo:',
-      { flowStep: 'pedido_esperando_item', pedidoDraft: draft }
+      { flowStep: FLOW.PEDIDO_ESPERANDO_ITEM, pedidoDraft: draft }
     );
   }
   const rate = await getExchangeRate();
@@ -441,7 +442,7 @@ async function mostrarPresentaciones(producto, draft, rate) {
   if (!pres.length) {
     return textReply(
       `*${producto.name}* no tiene presentaciones cargadas.\n👉 Avisá al admin para que las cargue.`,
-      { flowStep: 'pedido_esperando_item', pedidoDraft: draft }
+      { flowStep: FLOW.PEDIDO_ESPERANDO_ITEM, pedidoDraft: draft }
     );
   }
 
@@ -454,7 +455,7 @@ async function mostrarPresentaciones(producto, draft, rate) {
       `¿Cuántas unidades de *${producto.name} — ${p.label}*?` +
       (p.price_usd ? `\n💵 ${formatPrice(Number(p.price_usd), rate)}` : ''),
       {
-        flowStep: 'pedido_esperando_cantidad',
+        flowStep: FLOW.PEDIDO_ESPERANDO_CANTIDAD,
         pedidoDraft: {
           ...draft,
           itemEnCurso: { ...itemEnCurso, presId: p.id, presLabel: p.label, priceUsd: p.price_usd ? Number(p.price_usd) : null }
@@ -474,7 +475,7 @@ async function mostrarPresentaciones(producto, draft, rate) {
     'Elegir',
     [{ title: 'Presentaciones', rows }],
     {
-      flowStep: 'pedido_seleccionar_presentacion',
+      flowStep: FLOW.PEDIDO_SELECCIONAR_PRESENTACION,
       pedidoDraft: { ...draft, itemEnCurso }
     }
   );
@@ -493,7 +494,7 @@ export async function handlePedidoSelectPresentacion(presId, session, waPhone) {
   if (!pres) {
     return textReply(
       '⚠️ No encontré esa presentación.',
-      { flowStep: 'pedido_esperando_item', pedidoDraft: draft }
+      { flowStep: FLOW.PEDIDO_ESPERANDO_ITEM, pedidoDraft: draft }
     );
   }
   const rate = await getExchangeRate();
@@ -501,7 +502,7 @@ export async function handlePedidoSelectPresentacion(presId, session, waPhone) {
     `¿Cuántas unidades de *${itemEnCurso.productName} — ${pres.label}*?` +
     (pres.price_usd ? `\n💵 ${formatPrice(Number(pres.price_usd), rate)}` : ''),
     {
-      flowStep: 'pedido_esperando_cantidad',
+      flowStep: FLOW.PEDIDO_ESPERANDO_CANTIDAD,
       pedidoDraft: {
         ...draft,
         itemEnCurso: { ...itemEnCurso, presId: pres.id, presLabel: pres.label, priceUsd: pres.price_usd ? Number(pres.price_usd) : null }
@@ -524,7 +525,7 @@ export async function handlePedidoEsperandoCantidad(args, session, waPhone) {
   if (isNaN(qty) || qty <= 0) {
     return textReply(
       '⚠️ Cantidad inválida. Escribí un número mayor a 0.',
-      { flowStep: 'pedido_esperando_cantidad', pedidoDraft: draft }
+      { flowStep: FLOW.PEDIDO_ESPERANDO_CANTIDAD, pedidoDraft: draft }
     );
   }
 
@@ -558,7 +559,7 @@ export async function handlePedidoEsperandoCantidad(args, session, waPhone) {
       { id: 'cart_add',  title: '➕ Agregar otro' },
       { id: 'cart_done', title: '📋 Ver resumen' }
     ],
-    { flowStep: 'pedido_esperando_item', pedidoDraft: { cliente: draft.cliente, carrito } }
+    { flowStep: FLOW.PEDIDO_ESPERANDO_ITEM, pedidoDraft: { cliente: draft.cliente, carrito } }
   );
 }
 
@@ -571,7 +572,7 @@ export async function handlePedidoCartAdd(session, waPhone) {
   if (!draft?.cliente) return textReply('Perdí el estado. Empezá de nuevo con */pedido*.');
   return textReply(
     '¿Qué más agregamos? Escribí nombre o ID del producto.',
-    { flowStep: 'pedido_esperando_item', pedidoDraft: { cliente: draft.cliente, carrito: draft.carrito || [] } }
+    { flowStep: FLOW.PEDIDO_ESPERANDO_ITEM, pedidoDraft: { cliente: draft.cliente, carrito: draft.carrito || [] } }
   );
 }
 
@@ -582,7 +583,7 @@ export async function handlePedidoCartDone(session, waPhone) {
   if (!carrito?.length) {
     return textReply(
       'El carrito está vacío. Agregá al menos un producto.',
-      { flowStep: 'pedido_esperando_item', pedidoDraft: draft }
+      { flowStep: FLOW.PEDIDO_ESPERANDO_ITEM, pedidoDraft: draft }
     );
   }
 
@@ -609,6 +610,6 @@ export async function handlePedidoCartDone(session, waPhone) {
       { id: 'confirm_yes', title: '✅ Confirmar pedido' },
       { id: 'confirm_no',  title: '❌ Cancelar' }
     ],
-    { flowStep: 'pedido_confirmando', pedidoDraft: draft }
+    { flowStep: FLOW.PEDIDO_CONFIRMANDO, pedidoDraft: draft }
   );
 }
