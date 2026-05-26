@@ -1,71 +1,117 @@
-# Estado de Implementación — Flujo Interactivo
+# Estado de Implementación — Flujo Interactivo /pedido
 
-> Actualizado: 2026-05-25  
-> Próxima tarea: Paso 4 — reescritura de `handlers/pedido.js`
+> Actualizado: 2026-05-26  
+> Estado general: **✅ COMPLETO — en producción y probado**
 
 ---
 
-## Pasos completados
+## Todos los pasos completados
 
 | Paso | Archivo | Estado | Notas |
 |------|---------|--------|-------|
-| 0 | `sql/09-presentations-prices.sql` | ✅ Aplicado en Supabase | Tablas nuevas verificadas |
-| 1 | `lib/meta.js` | ✅ Completo | `sendInteractiveButtons`, `sendInteractiveList`, helper `postToMeta` |
-| 1b | `lib/prices.js` | ✅ Completo | Caché 30 min, `getExchangeRate`, `formatPrice`, `toPyg` |
-| 2 | `lib/worker.js` | ✅ Completo | `dispatch()` detecta `_type` y llama sender correcto; `FLOW_COMMANDS` actualizado |
-| 3 | `lib/parser.js` | ✅ Completo | Detecta `__btn:*` y `__list:*`; `routeInteractive()` mapea IDs a commands |
+| 0 | SQL: tablas y RPCs | ✅ Aplicado | `product_presentations`, `pedido_items` ampliado, `crear_pedido`, `get_exchange_rate` |
+| 1 | `lib/meta.js` | ✅ Completo | `sendInteractiveButtons`, `sendInteractiveList` |
+| 1b | `lib/prices.js` | ✅ Completo | Caché 30 min, `getExchangeRate`, `formatPrice`, `toPyg`, `formatTotal` |
+| 2 | `lib/worker.js` | ✅ Completo | `extractPayload`, `dispatch` con `_type`, `FLOW_COMMANDS` con los 14 comandos de flujo |
+| 3 | `lib/parser.js` | ✅ Completo | `parseIntent` con flowSteps, `parseInteractive` → `routeInteractive` |
+| 4 | `handlers/pedido.js` | ✅ Completo | 15 handlers — flujo interactivo completo de extremo a extremo |
+| 4b | `lib/pedidos.js` | ✅ Completo | `buscarProductosPorNombre`, `buscarProductoPorId`, `buscarPresentaciones`, `crearPedido` |
+| 5 | n8n workflow | ✅ Completo | IF filtra messages[], message_body = JSON.stringify(messages[0]) |
 
 ---
 
-## Pasos pendientes
+## Arquitectura del flujo /pedido (estado final)
 
-| Paso | Archivo | Prioridad | Descripción |
-|------|---------|-----------|-------------|
-| 4 | `handlers/pedido.js` | 🔴 Alta | Reescritura completa con flujo interactivo. Ver flujo en `docs/comandos/ventas.md` |
-| 4b | `lib/pedidos.js` | 🔴 Alta | Agregar `buscarPresentaciones(productId)` y ajustar `crearPedido` para nuevos campos |
-| 5 | n8n workflow | 🟡 Media | Mapear `button_reply` y `list_reply` a `__btn:*` / `__list:*` antes de insertar en bot_queue |
+```
+/pedido
+  └─► buscar cliente (texto libre)
+        ├─► lista de clientes encontrados [cli_<ruc>]
+        │     └─► cliente seleccionado → pedido_esperando_item
+        ├─► [cli_cf] Consumidor Final → pedido_esperando_item
+        └─► [cli_new] Alta de cliente
+              ├─► ingresa RUC (texto)
+              ├─► ingresa nombre (texto) → flowStep: pedido_alta_nombre
+              └─► [alta_confirm] confirmar alta → pedido_esperando_item
 
----
-
-## Cómo probar antes del Paso 4
-
-Para verificar que la infraestructura (Pasos 1-3) funciona de punta a punta **antes** de reescribir el handler de pedido, podés agregar temporalmente en `commands.js` un comando de prueba:
-
-```js
-// En handleCommand, agregar caso temporal:
-case '!test_btn':
-  return {
-    _type: 'buttons',
-    body: '¿Funciona el botón?',
-    buttons: [
-      { id: 'confirm_yes', title: '✅ Sí funciona' },
-      { id: 'confirm_no',  title: '❌ No funciona' }
-    ],
-    _session: { flowStep: 'pedido_confirmando', pedidoDraft: {} }
-  };
-
-case '!test_list':
-  return {
-    _type: 'list',
-    body: 'Elegí una opción:',
-    buttonText: 'Ver opciones',
-    sections: [{
-      title: 'Clientes de prueba',
-      rows: [
-        { id: 'cli_00000000-0', title: 'Consumidor Final', description: 'Sin RUC' },
-        { id: 'cli_new',        title: 'Crear nuevo',      description: 'Alta de cliente' }
-      ]
-    }]
-  };
+pedido_esperando_item
+  └─► busca producto (texto libre)
+        └─► lista de productos [prod_<id>]
+              └─► selección de presentación [pres_<id>]
+                    └─► ingresa cantidad → flowStep: pedido_esperando_cantidad
+                          └─► resumen del ítem + opciones carrito
+                                ├─► [cart_add] agregar otro → pedido_esperando_item
+                                └─► [cart_done] ver resumen
+                                      └─► [confirm_yes] → RPC crear_pedido → ✅
+                                          [confirm_no]  → pedido cancelado
 ```
 
-Enviando `/test_btn` o `/test_list` por WhatsApp verificás que:
-1. El worker detecta `_type` correctamente
-2. Meta recibe y renderiza el mensaje interactivo
-3. Al tocar un botón, n8n lo captura y lo encola con el prefijo `__btn:*`
-4. El parser lo routea correctamente (visible en logs del worker)
+---
 
-**Eliminar los casos de prueba antes del Paso 4.**
+## Handlers en handlers/pedido.js
+
+| Handler exportado | Comando interno | flowStep que genera |
+|------------------|----------------|---------------------|
+| `handlePedido` | `!pedido` | `pedido_esperando_cliente` |
+| `handlePedidoBuscarCliente` | `__pedido_buscar_cliente__` | `pedido_cliente_confirmado` (si 1 resultado) |
+| `handlePedidoSelectCliente` | `__pedido_select_cliente__` | `pedido_esperando_item` |
+| `handlePedidoConsumidorFinal` | `__pedido_consumidor__` | `pedido_esperando_item` |
+| `handlePedidoAltaRuc` | `__pedido_alta_ruc__` | `pedido_alta_ruc` (espera texto) |
+| `handlePedidoAltaNombre` | `__pedido_alta_nombre__` | `pedido_alta_nombre` (espera texto) |
+| `handlePedidoAltaConfirm` | `__pedido_alta_confirm__` | `pedido_esperando_item` |
+| `handlePedidoAltaCancel` | `__pedido_alta_cancel__` | `pedido_esperando_cliente` |
+| `handlePedidoEsperandoItem` | `__pedido_esperando_item__` | `pedido_esperando_cantidad` (tras selección de pres.) |
+| `handlePedidoSelectProducto` | `__pedido_select_prod__` | muestra presentaciones |
+| `handlePedidoSelectPresentacion` | `__pedido_select_pres__` | `pedido_esperando_cantidad` |
+| `handlePedidoEsperandoCantidad` | `__pedido_esperando_cantidad__` | `pedido_confirmando` o `pedido_esperando_item` |
+| `handlePedidoCartAdd` | `__pedido_cart_add__` | `pedido_esperando_item` |
+| `handlePedidoCartDone` | `__pedido_cart_done__` | `pedido_confirmando` |
+| `handlePedidoConfirmar` | `__pedido_confirmar__` | null (cierra flujo) o estado anterior |
+
+`handlePedidoConfirmar` es dual-use: actúa según el `session.flowStep`:
+- `pedido_cliente_confirmado` → confirmar selección de cliente
+- `pedido_alta_confirmando` → confirmar datos del cliente nuevo (delega a AltaConfirm/AltaCancel)
+- default → confirmación final del pedido → RPC `crear_pedido`
+
+---
+
+## n8n — Diseño final implementado
+
+**Diferencia clave vs diseño original:**
+
+El diseño inicial planteaba que n8n transformaría los mensajes interactivos a prefijos `__btn:*` y `__list:*` antes de insertar en bot_queue. **Esto NO se implementó.**
+
+El diseño final (en producción) es más simple:
+- n8n almacena siempre `JSON.stringify(messages[0])` — el objeto crudo de Meta
+- El worker extrae el contenido en `extractPayload()` (lib/worker.js)
+- Para `msg.type === 'interactive'`: extrae `button_reply.id` o `list_reply.id`
+- El parser recibe el ID limpio directamente (ej: `"confirm_yes"`, `"cli_80012345-6"`)
+
+Este enfoque elimina lógica condicional en n8n y centraliza el parsing en el backend.
+
+---
+
+## Bugs conocidos y pendientes
+
+### 🔴 Bug: Validación de vendedor muy tarde en el flujo
+
+**Síntoma:** El bot permite hacer todo el flujo /pedido y recién al confirmar el pedido el RPC lanza `vendedor_no_autorizado` si el número está deshabilitado en la tabla `vendedores`.
+
+**Causa:** `isAllowed()` en worker.js se llama al inicio de cada job (correcto), pero si el vendedor está activo al inicio del flujo y luego se deshabilita, o si hay desincronización, el error aparece al final.
+
+**Impacto actual:** Bajo — los vendedores rara vez se deshabilitan durante un flujo activo. El error es claro y el job queda como `error` en la cola.
+
+**Fix planeado:** Agregar validación de `isAllowed()` también dentro del primer handler del flujo (`handlePedido`), antes de iniciar el flujo interactivo.
+
+---
+
+## Datos pendientes de carga (no son bugs de código)
+
+| Dato | Tabla | Estado | Acción requerida |
+|------|-------|--------|-----------------|
+| Precios de presentaciones | `product_presentations.price_usd` | ⚠️ Todos en 0 | Cargar precios reales en USD |
+| Tipo de cambio USD→PYG | `exchange_rates` | ⚠️ Sin dato | Cargar tasa inicial; luego n8n lo actualizará |
+
+Mientras `price_usd = 0` y no hay tasa cargada, el bot funciona pero muestra "Sin precio cargado" en vez de los precios reales.
 
 ---
 
@@ -73,62 +119,9 @@ Enviando `/test_btn` o `/test_list` por WhatsApp verificás que:
 
 | Decisión | Razón |
 |----------|-------|
-| `unit_price_pyg` no se almacena | Es dato derivado — se computa siempre desde `unit_price_usd × exchange_rate` |
+| `message_body` = JSON completo, no prefijos | Centraliza parsing en backend; n8n sin lógica condicional |
+| `unit_price_pyg` no se calcula en el bot | La columna existe en el schema; el RPC puede popularlo; el bot la usa si está disponible |
 | `total_monto` en pedidos en USD | Fuente de verdad única; PYG es siempre display |
 | Caché de tasa en memoria (30 min) | Evita query a Supabase en cada mensaje; fallback a última tasa si falla |
-| CONSUMIDOR FINAL como cliente con RUC `00000000-0` | Sin cambios al schema; filtrable en reportes; desacoplado |
-| Prefijos `__btn:` y `__list:` en bot_queue | n8n transforma antes de encolar; parser no necesita saber el tipo Meta |
-
----
-
-## Cambios requeridos en n8n (hacerlos antes de probar Paso 4)
-
-Santiago (arquitecto) identificó **3 bugs y 1 mejora** en el workflow actual:
-
-### Bug 1 — Path incorrecto en todos los campos
-
-Primero verificar el path real activando una ejecución de prueba y mirando el panel de ejecución de n8n. Luego corregir:
-
-| Campo | Path actual (bugueado) | Path correcto |
-|-------|----------------------|---------------|
-| `message_id` | `$json["body"]["entry"]["0"]...` | `$json["entry"][0]["changes"][0]["value"]["messages"][0]["id"]` |
-| `phone_number` | idem | `$json["entry"][0]["changes"][0]["value"]["messages"][0]["from"]` |
-| `customer_name` | idem | `$json["entry"][0]["changes"][0]["value"]["contacts"][0]["profile"]["name"]` |
-| `message_body` | `JSON.stringify($json.messages[0])` ← **siempre NULL** | `{{ JSON.stringify($json["entry"][0]["changes"][0]["value"]["messages"][0]) }}` |
-
-> **Nota:** si n8n sí envuelve en `body` (verificar en el panel), el path es `$json["body"]["entry"][0]...` con índice numérico `[0]`, no string `"0"`.
-
-### Bug 2 — Status webhooks sin filtrar
-
-Meta envía webhooks de `delivered`, `read`, `failed` que no tienen `messages[]`. Agregar nodo IF entre Webhook y Supabase:
-
-```
-Condición: {{ Array.isArray($json["entry"][0]["changes"][0]["value"]["messages"]) && $json["entry"][0]["changes"][0]["value"]["messages"].length > 0 }}
-Rama true  → nodo Supabase (encolar)
-Rama false → fin (Meta ya recibió 200)
-```
-
-### Decisión arquitectónica — message_body como JSON completo
-
-`message_body` almacena `JSON.stringify(messages[0])` — el objeto completo de Meta.
-El backend extrae `text` o `interactiveId` según `msg.type`. No se necesitan prefijos ni transformaciones en n8n.
-
-## Dependencia crítica para el Paso 5 (n8n)
-
-El workflow de n8n debe detectar si el mensaje entrante de Meta es de tipo `interactive` y transformarlo antes de insertar en `bot_queue`:
-
-```
-Meta payload tipo "button_reply":
-  messages[0].interactive.button_reply.id = "confirm_yes"
-  → bot_queue.message_body = "__btn:confirm_yes"
-
-Meta payload tipo "list_reply":
-  messages[0].interactive.list_reply.id = "cli_80012345-6"
-  → bot_queue.message_body = "__list:cli_80012345-6"
-
-Meta payload tipo "text" (sin cambios):
-  messages[0].text.body = "hola"
-  → bot_queue.message_body = "hola"
-```
-
-Hacer este cambio en n8n **antes** de probar el Paso 4 en producción.
+| CONSUMIDOR FINAL como cliente con RUC `00000000-0` | Sin cambios al schema; filtrable en reportes |
+| `price_usd = 0` equivale a sin precio cargado | Permite UPDATEs sin NULL; bot trata 0 como falsy (mismo comportamiento) |
