@@ -71,6 +71,6 @@ function formatRecomendacion(g) {
     lineas.push('', `📝 ${g.notes}`);
   }
 
-  lineas.push('', `👉 */${g.recommended_product_id}* ficha · */vender ${g.recommended_product_id}* registrar`);
+  lineas.push('', `👉 */${g.recommended_product_id}* para ver la ficha completa`);
   return lineas.join('\n');
 }

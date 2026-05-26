@@ -276,26 +276,24 @@ async function cmdTop(supabase) {
 function cmdAyuda() {
   return [
     '🤖 *CGS Bot — Qué puedo hacer*\n',
-    '*Ver productos*',
-    '  /catalogo                  → Lista completa con IDs',
-    '  /auto · /moto · /camion    → Por categoría',
-    '  /3                         → Ficha del producto [3]',
-    '  /buscar elaion 5w30        → Búsqueda inteligente',
-    '  /guia toyota corolla 2018  → Recomendación por vehículo',
+    '*Registrar un pedido*',
+    '  /pedido           → Te guío paso a paso con botones',
+    '  /mispedidos       → Tus pedidos de hoy',
+    '  /mispedidos semana → Tus pedidos de los últimos 7 días',
     '',
-    '*Registrar pedidos con cliente*',
-    '  /pedido                    → Te guío paso a paso',
-    '  /pedido [RUC]              → Cliente conocido, pide items',
-    '  /pedido [RUC] [ID cant]    → Atajo: cliente + items en un mensaje',
-    '  /mispedidos                → Tus últimos pedidos',
+    '*Consultar productos*',
+    '  /catalogo         → Lista completa de productos',
+    '  /auto  /moto  /camion  → Filtrar por categoría',
+    '  /buscar elaion 5w30    → Búsqueda por nombre o viscosidad',
+    '  /guia toyota corolla 2018 → Aceite recomendado por vehículo',
     '',
     '*Reportes*',
-    '  /ventas                    → Lo que se vendió hoy',
-    '  /ventas semana             → Últimos 7 días',
-    '  /ranking                   → Top 5 productos de la semana',
+    '  /ventas           → Lo que se vendió hoy',
+    '  /ventas semana    → Últimos 7 días',
+    '  /ranking          → Top 5 productos de la semana',
     '',
-    '💡 Cuando aparezca una lista, escribí *1*, *2*... para elegir.',
-    '💡 Escribí */salir* para cancelar lo que estés haciendo.'
+    '💡 En el flujo de pedido usá los botones y listas que aparecen.',
+    '💡 Escribí */salir* en cualquier momento para cancelar.'
   ].join('\n');
 }
 

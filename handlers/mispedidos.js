@@ -1,5 +1,4 @@
 import { listarPedidos, listarTotalesPedidos } from '../lib/pedidos.js';
-import { formatPrice } from '../lib/prices.js';
 
 const ESTADO_EMOJI = {
   pendiente:  '🟡',
