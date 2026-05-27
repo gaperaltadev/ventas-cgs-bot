@@ -295,7 +295,7 @@ export async function handlePedidoConfirmar(args, session, waPhone) {
   const step = session.flowStep;
 
   // — Confirmar cliente encontrado por RUC (Paso 2B) —
-  if (step === 'pedido_cliente_confirmado') {
+  if (step === FLOW.PEDIDO_CLIENTE_CONFIRMADO) {
     if (!si) {
       return textReply(
         '¿Para qué cliente? Escribí el nombre o RUC:',
@@ -312,7 +312,7 @@ export async function handlePedidoConfirmar(args, session, waPhone) {
   }
 
   // — Confirmar alta de cliente nuevo (Paso 2D) —
-  if (step === 'pedido_alta_confirmando') {
+  if (step === FLOW.PEDIDO_ALTA_CONFIRMANDO) {
     return si
       ? handlePedidoAltaConfirm(session, waPhone)
       : handlePedidoAltaCancel(session, waPhone);

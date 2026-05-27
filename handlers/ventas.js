@@ -1,7 +1,8 @@
 // Comandos de reportes: /ventas y /ranking.
 
-import { supabase }       from '../lib/supabase.js';
+import { supabase }        from '../lib/supabase.js';
 import { CATEGORY_LABELS } from '../lib/format.js';
+import { inicioDeHoyPY }   from '../lib/pedidos.js';
 
 // ─── /ventas [hoy|semana] ────────────────────────────────────────────────────
 
@@ -10,7 +11,7 @@ export async function handleVentas(args) {
   let desde;
 
   if (periodo === 'hoy') {
-    desde = new Date(); desde.setHours(0, 0, 0, 0);
+    desde = inicioDeHoyPY();   // medianoche Paraguay (UTC-4), no UTC
   } else if (periodo === 'semana') {
     desde = new Date(); desde.setDate(desde.getDate() - 7);
   } else {

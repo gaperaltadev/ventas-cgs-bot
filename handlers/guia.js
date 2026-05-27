@@ -38,20 +38,29 @@ export async function handleGuia(args) {
     return formatRecomendacion(results[0]);
   }
 
-  // Múltiples → lista breve para que el usuario refine
+  // Múltiples → lista interactiva para que el usuario elija
   const year = extractYear(term);
-  const head = year
+  const body = year
     ? `Encontré varias opciones para "*${term}*":`
-    : `Encontré varias opciones (especificá año si querés afinar):`;
+    : `Encontré varias opciones — especificá año para afinar:`;
 
-  const items = results.map((g, i) => {
-    const rango = formatRangoAnios(g);
-    const motor = g.engine_type ? ` · ${g.engine_type}` : '';
-    return `  ${i + 1}. ${g.brand} ${g.model}${rango ? ' (' + rango + ')' : ''}${motor}\n` +
-           `       → [${g.recommended_product_id}] ${g.recommended_name}`;
-  }).join('\n');
-
-  return `${head}\n\n${items}\n\n👉 Escribí */[ID]* para ver la ficha del producto.`;
+  return {
+    _type: 'list',
+    body,
+    buttonText: 'Ver opciones',
+    sections: [{
+      title: 'Vehículos',
+      rows: results.map(g => {
+        const rango = formatRangoAnios(g);
+        const motor = g.engine_type ? ` · ${g.engine_type}` : '';
+        return {
+          id:          `ficha_${g.recommended_product_id}`,
+          title:       `${g.brand} ${g.model}${rango ? ' (' + rango + ')' : ''}${motor}`.slice(0, 24),
+          description: `→ ${g.recommended_name}`.slice(0, 72)
+        };
+      })
+    }]
+  };
 }
 
 function formatRecomendacion(g) {

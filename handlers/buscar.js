@@ -1,5 +1,5 @@
 import { buscarProductos, buscarGuiaVehiculo } from '../lib/search.js';
-import { fichaProducto, withList } from '../lib/format.js';
+import { fichaProducto } from '../lib/format.js';
 import { handleGuia } from './guia.js';
 
 export async function handleBuscar(args) {
@@ -25,16 +25,23 @@ export async function handleBuscar(args) {
   }
 
   if (results.length > 1) {
-    const header = typo
-      ? `¿Quisiste decir *${results[0].name}*?`
+    const body = typo
+      ? `¿Quisiste decir *${results[0].name}*? Encontré estos productos:`
       : `Encontré varios para "*${term}*":`;
 
-    return withList(
-      header,
-      results,
-      'Escribí *1*, *2*... para la ficha completa.',
-      { lastAction: 'ficha' }
-    );
+    return {
+      _type: 'list',
+      body,
+      buttonText: 'Ver productos',
+      sections: [{
+        title: 'Productos',
+        rows: results.map(p => ({
+          id:          `ficha_${p.id}`,
+          title:       p.name.slice(0, 24),
+          description: [p.viscosity, p.technology].filter(Boolean).join(' · ')
+        }))
+      }]
+    };
   }
 
   // ─── 2. Sin resultados en productos → probar como vehículo ─────────────
