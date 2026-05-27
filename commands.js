@@ -41,11 +41,17 @@ import {
 export async function handleCommand(command, args, session = {}, waPhone = '') {
   switch (command) {
     // ── Catálogo ──────────────────────────────────────────────────────────
-    case '!catalogo': case '!c':    return handleCatalogo();
-    case '!producto': case '!p':    return handleProducto(args);
-    case '!categoria': case '!cat': return handleCategoria(args);
-    case '!buscar':   case '!b':    return handleBuscar(args);
-    case '!guia':     case '!g':    return handleGuia(args);
+    case '!catalogo': case '!c':       return handleCatalogo();
+    case '!producto': case '!p':       return handleProducto(args);
+    case '!categoria': case '!cat':    return handleCategoria(args);
+    case '!buscar':   case '!b':       return handleBuscar(args);
+    case '!guia':     case '!g':       return handleGuia(args);
+
+    // ── Catálogo interactivo (botones/listas) ─────────────────────────────
+    // cat_auto / cat_moto / cat_camion / cat_otros → lista de productos
+    // ficha_{id} → ficha del producto
+    case '__catalogo_cat__':           return handleCategoria(args);
+    case '__catalogo_ficha__':         return handleProducto(args);
 
     // ── Pedidos ───────────────────────────────────────────────────────────
     case '!pedido':                 return handlePedido(args, waPhone);

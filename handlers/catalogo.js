@@ -1,37 +1,37 @@
 // Comandos de consulta de catálogo: /catalogo, /categoria, /producto, y
 // selección numérica de lista activa (__select__).
+//
+// Flujo interactivo:
+//   /catalogo → lista de 4 categorías (cat_auto / cat_moto / cat_camion / cat_otros)
+//   Tocar categoría → lista de productos de esa categoría (ficha_{id})
+//   Tocar producto  → ficha completa del producto (texto)
+//
+// Los IDs de botones cat_ y ficha_ se rutean en parser.js → routeInteractive,
+// y se despachan desde commands.js como __catalogo_cat__ y __catalogo_ficha__.
 
-import * as Sentry from '@sentry/node';
 import { supabase }   from '../lib/supabase.js';
 import { CATEGORY_LABELS, CATEGORY_ALIASES, fichaProducto } from '../lib/format.js';
 import { handleBuscar } from './buscar.js';
 
 // ─── /catalogo ───────────────────────────────────────────────────────────────
+// Devuelve una lista interactiva con las 4 categorías.
+// No requiere consulta a DB — el catálogo de categorías es estático.
 
-export async function handleCatalogo() {
-  const { data, error } = await supabase
-    .from('products')
-    .select('id, name, category')
-    .order('sort_order', { ascending: true });
-
-  if (error) {
-    Sentry.captureException(error, { extra: { cmd: 'catalogo' } });
-    return 'Error al obtener el catálogo. Intentá de nuevo en un momento.';
-  }
-  if (!data.length) return 'El catálogo está vacío. Contactá al administrador.';
-
-  const grouped = {};
-  for (const p of data) {
-    const cat = CATEGORY_LABELS[p.category] || p.category;
-    (grouped[cat] ??= []).push(`  [${p.id}] ${p.name}`);
-  }
-
-  const lines = ['📋 *Catálogo CGS Paraguay*\n'];
-  for (const [cat, items] of Object.entries(grouped)) {
-    lines.push(`*${cat}*`, ...items, '');
-  }
-  lines.push('👉 Escribí *[ID]* para ver la ficha o */pedido* para registrar un pedido');
-  return lines.join('\n');
+export function handleCatalogo() {
+  return {
+    _type: 'list',
+    body: '📋 *Catálogo CGS Paraguay*\n\nElegí una categoría para ver los productos.',
+    buttonText: 'Ver categorías',
+    sections: [{
+      title: 'Categorías',
+      rows: [
+        { id: 'cat_auto',   title: '🚗 Autos',    description: 'ELAION F10 · F30 · F50 · SUV' },
+        { id: 'cat_moto',   title: '🏍️ Motos',   description: 'YPF RÖD 4T · 2T · Cadenas' },
+        { id: 'cat_camion', title: '🚛 Camiones', description: 'EXTRAVIDA DX · ULTRA · MAXIMO' },
+        { id: 'cat_otros',  title: '🔧 Otros',    description: 'Refrigerante · Frenos · Grasa · Hidráulico' }
+      ]
+    }]
+  };
 }
 
 // ─── /producto [ID] ──────────────────────────────────────────────────────────
@@ -56,6 +56,8 @@ export async function handleProducto(args) {
 }
 
 // ─── /categoria [cat] ────────────────────────────────────────────────────────
+// También invocado vía interactivo (cat_auto, cat_moto, etc.).
+// Devuelve una lista interactiva con los productos de la categoría.
 
 export async function handleCategoria(args) {
   if (!args.length) {
@@ -78,13 +80,18 @@ export async function handleCategoria(args) {
   if (error) return 'Error al obtener la categoría. Intentá de nuevo en un momento.';
   if (!data.length) return 'No hay productos en esta categoría.';
 
-  const lines = [`📦 *${CATEGORY_LABELS[cat]}*\n`];
-  for (const p of data) {
-    const badge = p.badge ? ` 🏷️ ${p.badge}` : '';
-    lines.push(`[${p.id}] ${p.name} — ${p.viscosity || p.technology}${badge}`);
-  }
-  lines.push('\n👉 Escribí *[ID]* para ver la ficha o */pedido* para registrar un pedido');
-  return lines.join('\n');
+  return {
+    _type: 'list',
+    body: `📦 *${CATEGORY_LABELS[cat]}*\n\nElegí un producto para ver la ficha completa.`,
+    buttonText: 'Ver productos',
+    sections: [{
+      title: CATEGORY_LABELS[cat],
+      rows: data.map(p => {
+        const parts = [p.viscosity, p.technology, p.badge].filter(Boolean);
+        return { id: `ficha_${p.id}`, title: p.name, description: parts.join(' · ') };
+      })
+    }]
+  };
 }
 
 // ─── __select__ — selección numérica de lista de browse ─────────────────────
